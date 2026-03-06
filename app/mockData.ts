@@ -20,12 +20,87 @@ export const LOCATIONS: Location[] = [
 
 export const SUPPLIERS: Supplier[] = [
     // External Suppliers
-    { id: 'SUP001', name: '共和産業', type: '業者', officialName: '共和産業株式会社', contactInfo: { method: '訪問', zip: '719-0232', address: '岡山県浅口市鴨方町本庄398-1', tel: '0865-44-1200', fax: '0865-44-1201' } },
-    { id: 'SUP002', name: 'MCS', type: '業者', officialName: '株式会社MCS 東部営業所', contactInfo: { method: '訪問', address: '広島県福山市神村町26-1', tel: '084-939-5527' } },
-    { id: 'SUP003', name: '浅野通商', type: '業者', officialName: '株式会社アサショウ 広島営業所', contactInfo: { method: '訪問', zip: '739-0321', address: '広島市安芸区中野5-13-15', tel: '082-892-9870', fax: '082-892-9871' } },
-    { id: 'SUP004', name: 'マルワパッケージ', type: '業者', officialName: '（有）マルワパッケージ', contactInfo: { method: '訪問', zip: '710-0834', address: '岡山県倉敷市笹沖546-4', tel: '086-426-5687' } },
-    { id: 'SUP005', name: '新日本製紙', type: '業者', officialName: '新日本紙工株式会社', contactInfo: { method: 'FAX', zip: '791-0205', address: '愛媛県東温市西岡367-1', tel: '089-964-5541', fax: '089-964-5548' } },
-    { id: 'SUP006', name: '石川島ボイラー', type: '業者', officialName: '株式会社IHI汎用ボイラ 西日本支店 福山営業所', contactInfo: { method: 'TEL/FAX', zip: '720-0092', address: '広島県福山市山手町3-6-1', tel: '084-952-0041', fax: '084-952-0043' } },
+    {
+        id: 'SUP001',
+        name: '共和産業',
+        type: '業者',
+        officialName: '共和産業株式会社',
+        method: '訪問',
+        zip: '719-0232',
+        address: '岡山県浅口市鴨方町本庄398-1',
+        tel: '0865-44-1200',
+        fax: '0865-44-1201',
+        deliveryDayOfWeek: '火',
+        cutoffDayOfWeek: '月',
+        cutoffTime: '17:00'
+    },
+    {
+        id: 'SUP002',
+        name: 'MCS',
+        type: '業者',
+        officialName: '株式会社MCS 東部営業所',
+        method: '訪問',
+        address: '広島県福山市神村町26-1',
+        tel: '084-939-5527',
+        deliveryDayOfWeek: '水',
+        cutoffDayOfWeek: '火',
+        cutoffTime: '15:00'
+    },
+    {
+        id: 'SUP003',
+        name: '浅野通商',
+        type: '業者',
+        officialName: '株式会社アサショウ 広島営業所',
+        method: '訪問',
+        zip: '739-0321',
+        address: '広島市安芸区中野5-13-15',
+        tel: '082-892-9870',
+        fax: '082-892-9871',
+        deliveryDayOfWeek: '木',
+        cutoffDayOfWeek: '水',
+        cutoffTime: '17:00'
+    },
+    {
+        id: 'SUP004',
+        name: 'マルワパッケージ',
+        type: '業者',
+        officialName: '（有）マルワパッケージ',
+        method: '訪問',
+        zip: '710-0834',
+        address: '岡山県倉敷市笹沖546-4',
+        tel: '086-426-5687',
+        deliveryDayOfWeek: '金',
+        cutoffDayOfWeek: '木',
+        cutoffTime: '12:00'
+    },
+    {
+        id: 'SUP005',
+        name: '新日本製紙',
+        type: '業者',
+        officialName: '新日本紙工株式会社',
+        method: 'FAX',
+        zip: '791-0205',
+        address: '愛媛県東温市西岡367-1',
+        tel: '089-964-5541',
+        fax: '089-964-5548',
+        deliveryDayOfWeek: '月',
+        cutoffDayOfWeek: '金',
+        cutoffTime: '17:00'
+    },
+    {
+        id: 'SUP006',
+        name: '石川島ボイラー',
+        type: '業者',
+        officialName: '株式会社IHI汎用ボイラ 西日本支店 福山営業所',
+        method: 'TEL/FAX',
+        zip: '720-0092',
+        address: '広島県福山市山手町3-6-1',
+        tel: '084-952-0041',
+        fax: '084-952-0043',
+        deliveryDayOfWeek: '不定',
+        cutoffDayOfWeek: '不定',
+        cutoffTime: '17:00'
+    },
 ];
 
 export const ROUTE_MAP: Record<string, string[]> = {
