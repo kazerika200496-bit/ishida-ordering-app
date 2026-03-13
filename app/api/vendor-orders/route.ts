@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
+export const dynamic = 'force-dynamic';
+
 // 曜日文字列を数値に変換 (0: 日, 1: 月, ...)
 const dayMap: Record<string, number> = {
     '日': 0, '月': 1, '火': 2, '水': 3, '木': 4, '金': 5, '土': 6
