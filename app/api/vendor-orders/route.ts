@@ -42,6 +42,10 @@ function calculateCycle(supplier: any) {
 
 // 業者別 注文リストの取得
 export async function GET(request: Request) {
+    // DATABASE_URL がない場合はビルド時とみなして空情報を返す
+    if (!process.env.DATABASE_URL && process.env.NODE_ENV === 'production') {
+        return NextResponse.json([]);
+    }
     const { searchParams } = new URL(request.url);
     const vendorId = searchParams.get('vendorId');
     const status = searchParams.get('status'); // DRAFT | CONFIRMED | SENT
