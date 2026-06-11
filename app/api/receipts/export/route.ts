@@ -30,6 +30,13 @@ export async function POST(request: NextRequest) {
         // 【重複防止】未出力かつ確定済（CONFIRMED）のものだけを対象とする
         const receipts = await prisma.receipt.findMany({
             where: whereClause,
+            include: {
+                createdBy: {
+                    include: {
+                        location: true
+                    }
+                }
+            },
             orderBy: { receiptDate: 'asc' }
         });
 

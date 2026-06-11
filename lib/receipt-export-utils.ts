@@ -26,6 +26,8 @@ export const DEFAULT_FORMATTER: ExportFormatter = {
         '税区分',
         '金額',
         '消費税額',
+        '登録者',
+        '店舗/拠点',
         '元画像'
     ],
     mapRow: (r: any) => {
@@ -39,6 +41,8 @@ export const DEFAULT_FORMATTER: ExportFormatter = {
         const taxCategory = r.taxCategory || '';
         const amount = r.amount || 0;
         const taxAmount = r.taxAmount || 0;
+        const userName = r.createdBy?.username || '';
+        const locationName = r.createdBy?.location?.name || '';
         const imageInfo = r.imageUrl && r.imageUrl.startsWith('data:image') ? 'Base64画像保存済' : (r.imageUrl || '');
 
         return [
@@ -52,6 +56,8 @@ export const DEFAULT_FORMATTER: ExportFormatter = {
             taxCategory,
             amount,
             taxAmount,
+            userName,
+            locationName,
             imageInfo
         ];
     }
