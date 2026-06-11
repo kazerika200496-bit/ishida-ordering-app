@@ -203,8 +203,10 @@ export default function Home() {
                 (selectedCategory === 'おすすめ' ? recommendedItemIds.includes(item.id) : item.category === selectedCategory);
             const itemName = item.name || '';
             const itemId = item.id || '';
+            const materialCode = item.materialCode || '';
             const matchesSearch = itemName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                itemId.toLowerCase().includes(searchQuery.toLowerCase());
+                itemId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                materialCode.toLowerCase().includes(searchQuery.toLowerCase());
             return matchesCategory && matchesSearch;
         }).sort((a, b) => {
             // おすすめを優先的に上に
@@ -586,7 +588,7 @@ export default function Home() {
                                             )}
                                         </div>
                                         <div style={{ flex: 1 }}>
-                                            <div style={{ fontSize: '11px', color: '#999' }}>{item.category} / {item.id}</div>
+                                            <div style={{ fontSize: '11px', color: '#999' }}>{item.category} / {item.materialCode || item.id}</div>
                                             <div style={{ fontSize: '15px', fontWeight: 'bold', margin: '2px 0', lineHeight: '1.2' }}>{item.displayName || item.name}</div>
                                             {!isStoreRole && (
                                                 <div style={{ fontSize: '14px', color: '#1a73e8', fontWeight: 'bold' }}>

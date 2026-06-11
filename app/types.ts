@@ -26,6 +26,7 @@ export interface Supplier {
 
 export interface Item {
     id: string;
+    materialCode?: string | null;
     category: string;
     name: string;
     unit: string;

@@ -4,8 +4,21 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Item, Location, Supplier } from '../types';
 
+const CATEGORIES = [
+    '店舗備品',
+    '工場備品',
+    '洗剤・溶剤',
+    'ハンガー類',
+    '包装資材',
+    '伝票・書類',
+    '文具系',
+    '看板・ボード',
+    'その他'
+];
+
 export default function AdminPage() {
     const [activeTab, setActiveTab] = useState<'locations' | 'suppliers' | 'items'>('items');
+    const [adminCategoryFilter, setAdminCategoryFilter] = useState('すべて');
 
     const [items, setItems] = useState<Item[]>([]);
     const [locations, setLocations] = useState<Location[]>([]);
@@ -64,7 +77,7 @@ export default function AdminPage() {
     };
 
     const addItem = () => {
-        const newItem: Item = { id: `new-${Date.now()}`, name: '', price: 0, unit: '', category: 'その他', defaultSupplierId: suppliers[0]?.id || '' };
+        const newItem: Item = { id: `new-${Date.now()}`, materialCode: '', name: '', price: 0, unit: '', category: 'その他', defaultSupplierId: suppliers[0]?.id || '' };
         setItems([...items, newItem]);
         setIsDirty(true);
     };
@@ -133,9 +146,30 @@ export default function AdminPage() {
             const validLocations = locations.filter(l => l.name.trim() !== '');
             const validSuppliers = suppliers.filter(s => s.name.trim() !== '');
 
-            const itemPromises = validItems.map(item => fetch('/api/items', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(item) }));
-            const locPromises = validLocations.map(loc => fetch('/api/locations', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(loc) }));
-            const supPromises = validSuppliers.map(sup => fetch('/api/suppliers', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(sup) }));
+            const itemPromises = validItems.map(async item => {
+                const res = await fetch('/api/items', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(item) });
+                if (!res.ok) {
+                    const data = await res.json().catch(() => ({}));
+                    throw new Error(data.error || `品目「${item.name}」の保存に失敗しました。`);
+                }
+                return res.json();
+            });
+            const locPromises = validLocations.map(async loc => {
+                const res = await fetch('/api/locations', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(loc) });
+                if (!res.ok) {
+                    const data = await res.json().catch(() => ({}));
+                    throw new Error(data.error || `拠点「${loc.name}」の保存に失敗しました。`);
+                }
+                return res.json();
+            });
+            const supPromises = validSuppliers.map(async sup => {
+                const res = await fetch('/api/suppliers', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(sup) });
+                if (!res.ok) {
+                    const data = await res.json().catch(() => ({}));
+                    throw new Error(data.error || `業者「${sup.name}」の保存に失敗しました。`);
+                }
+                return res.json();
+            });
 
             await Promise.all([...itemPromises, ...locPromises, ...supPromises]);
 
@@ -149,8 +183,8 @@ export default function AdminPage() {
 
             setIsDirty(false);
             alert('変更をサーバーとローカルに保存しました。空行は破棄されました。');
-        } catch (err) {
-            alert('保存に失敗しました。');
+        } catch (err: any) {
+            alert(err.message || '保存に失敗しました。');
         } finally {
             setIsSaving(false);
         }
@@ -192,7 +226,7 @@ export default function AdminPage() {
             </header>
 
             <main>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '10px' }}>
                     <div style={{ display: 'flex', gap: '10px' }}>
                         {(['items', 'locations', 'suppliers'] as const).map(tab => (
                             <button key={tab} onClick={() => setActiveTab(tab)} style={{ padding: '10px 20px', borderRadius: '8px', border: '1px solid #ddd', backgroundColor: activeTab === tab ? '#1a73e8' : '#fff', color: activeTab === tab ? '#fff' : '#333', cursor: 'pointer', fontWeight: 'bold' }}>
@@ -200,12 +234,29 @@ export default function AdminPage() {
                             </button>
                         ))}
                     </div>
-                    <button 
-                        onClick={() => activeTab === 'items' ? addItem() : activeTab === 'locations' ? addLocation() : addSupplier()}
-                        style={{ padding: '8px 16px', backgroundColor: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', color: '#0f172a' }}
-                    >
-                        ➕ {activeTab === 'items' ? '品目を追加' : activeTab === 'locations' ? '拠点を追加' : '業者を追加'}
-                    </button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        {activeTab === 'items' && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#666' }}>カテゴリ絞り込み:</span>
+                                <select
+                                    value={adminCategoryFilter}
+                                    onChange={(e) => setAdminCategoryFilter(e.target.value)}
+                                    style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', backgroundColor: '#fff', fontSize: '14px', cursor: 'pointer' }}
+                                >
+                                    <option value="すべて">すべて表示</option>
+                                    {CATEGORIES.map(cat => (
+                                        <option key={cat} value={cat}>{cat}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
+                        <button 
+                            onClick={() => activeTab === 'items' ? addItem() : activeTab === 'locations' ? addLocation() : addSupplier()}
+                            style={{ padding: '8px 16px', backgroundColor: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', color: '#0f172a' }}
+                        >
+                            ➕ {activeTab === 'items' ? '品目を追加' : activeTab === 'locations' ? '拠点を追加' : '業者を追加'}
+                        </button>
+                    </div>
                 </div>
 
                 <div style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '12px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)', maxHeight: '70vh', overflowY: 'auto' }}>
@@ -213,44 +264,68 @@ export default function AdminPage() {
                         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                             <thead style={{ position: 'sticky', top: 0, backgroundColor: '#fff', zIndex: 1, borderBottom: '2px solid #eee' }}>
                                 <tr>
-                                    <th style={{ padding: '10px', textAlign: 'left', fontSize: '13px' }}>ID</th>
+                                    <th style={{ padding: '10px', textAlign: 'left', fontSize: '11px', color: '#94a3b8', width: '80px' }}>内部ID</th>
+                                    <th style={{ padding: '10px', textAlign: 'left', fontSize: '13px', width: '150px' }}>資材ID</th>
+                                    <th style={{ padding: '10px', textAlign: 'left', fontSize: '13px', width: '140px' }}>カテゴリ</th>
                                     <th style={{ padding: '10px', textAlign: 'left', fontSize: '13px' }}>写真URL</th>
                                     <th style={{ padding: '10px', textAlign: 'left', fontSize: '13px' }}>品目名</th>
-                                    <th style={{ padding: '10px', textAlign: 'left', fontSize: '13px' }}>単価</th>
-                                    <th style={{ padding: '10px', textAlign: 'left', fontSize: '13px' }}>単位</th>
+                                    <th style={{ padding: '10px', textAlign: 'left', fontSize: '13px', width: '90px' }}>単価</th>
+                                    <th style={{ padding: '10px', textAlign: 'left', fontSize: '13px', width: '60px' }}>単位</th>
                                     <th style={{ padding: '10px', textAlign: 'center', fontSize: '13px', width: '60px' }}>操作</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {items.map(item => (
-                                    <tr key={item.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
-                                        <td style={{ padding: '8px' }}>{item.id.startsWith('new-') ? '新規' : item.id}</td>
-                                        <td style={{ padding: '8px' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                <div style={{ width: '40px', height: '40px', backgroundColor: '#f0f0f0', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
-                                                    {item.imageUrl ? (
-                                                        <img src={item.imageUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
-                                                    ) : (
-                                                        <span style={{ fontSize: '18px', color: '#ccc' }}>🖼️</span>
-                                                    )}
+                                {(() => {
+                                    const filteredItems = items.filter(item => adminCategoryFilter === 'すべて' || item.category === adminCategoryFilter);
+                                    return filteredItems.map(item => (
+                                        <tr key={item.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
+                                            <td style={{ padding: '8px', fontSize: '11px', color: '#94a3b8', verticalAlign: 'middle' }}>{item.id.startsWith('new-') ? '新規' : item.id}</td>
+                                            <td style={{ padding: '8px' }}>
+                                                <input 
+                                                    value={item.materialCode || ''} 
+                                                    placeholder="未設定(保存時ID)" 
+                                                    onChange={e => updateItem(item.id, 'materialCode', e.target.value)} 
+                                                    style={{ width: '100%', padding: '6px', border: '1px solid #e2e8f0', borderRadius: '4px' }} 
+                                                />
+                                            </td>
+                                            <td style={{ padding: '8px' }}>
+                                                <select
+                                                    value={item.category || 'その他'}
+                                                    onChange={e => updateItem(item.id, 'category', e.target.value)}
+                                                    style={{ width: '100%', padding: '5px', border: '1px solid #eee' }}
+                                                >
+                                                    {CATEGORIES.map(cat => (
+                                                        <option key={cat} value={cat}>{cat}</option>
+                                                    ))}
+                                                </select>
+                                            </td>
+                                            <td style={{ padding: '8px' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                    <div style={{ width: '40px', height: '40px', backgroundColor: '#f0f0f0', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
+                                                        {item.imageUrl ? (
+                                                            <img src={item.imageUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
+                                                        ) : (
+                                                            <span style={{ fontSize: '18px', color: '#ccc' }}>🖼️</span>
+                                                        )}
+                                                    </div>
+                                                    <input value={item.imageUrl || ''} placeholder="https://..." onChange={e => updateItem(item.id, 'imageUrl', e.target.value)} style={{ flex: 1, padding: '5px', border: '1px solid #eee', fontSize: '12px' }} />
                                                 </div>
-                                                <input value={item.imageUrl || ''} placeholder="https://..." onChange={e => updateItem(item.id, 'imageUrl', e.target.value)} style={{ flex: 1, padding: '5px', border: '1px solid #eee', fontSize: '12px' }} />
-                                            </div>
-                                        </td>
-                                        <td style={{ padding: '8px' }}>
-                                            <input value={item.name} onChange={e => updateItem(item.id, 'name', e.target.value)} style={{ width: '100%', padding: '5px', border: '1px solid #eee' }} placeholder="入力必須" />
-                                        </td>
-                                        <td style={{ padding: '8px' }}>
-                                            <input type="number" value={item.price || 0} onChange={e => updateItem(item.id, 'price', Number(e.target.value))} style={{ width: '70px', padding: '5px', border: '1px solid #eee', textAlign: 'right' }} />
-                                        </td>
-                                        <td style={{ padding: '8px' }}>
-                                            <input value={item.unit} onChange={e => updateItem(item.id, 'unit', e.target.value)} style={{ width: '40px', padding: '5px', border: '1px solid #eee' }} />
-                                        </td>
-                                        <td style={{ padding: '8px', textAlign: 'center' }}>
-                                            <button onClick={() => deleteItem(item.id)} style={{ padding: '4px 8px', backgroundColor: '#fee2e2', color: '#dc2626', border: '1px solid #fca5a5', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}>削除</button>
-                                        </td>
-                                    </tr>
-                                ))}
+                                            </td>
+                                            <td style={{ padding: '8px' }}>
+                                                <input value={item.name} onChange={e => updateItem(item.id, 'name', e.target.value)} style={{ width: '100%', padding: '5px', border: '1px solid #eee' }} placeholder="入力必須" />
+                                            </td>
+                                            <td style={{ padding: '8px' }}>
+                                                <input type="number" value={item.price || 0} onChange={e => updateItem(item.id, 'price', Number(e.target.value))} style={{ width: '70px', padding: '5px', border: '1px solid #eee', textAlign: 'right' }} />
+                                            </td>
+                                            <td style={{ padding: '8px' }}>
+                                                <input value={item.unit} onChange={e => updateItem(item.id, 'unit', e.target.value)} style={{ width: '40px', padding: '5px', border: '1px solid #eee' }} />
+                                            </td>
+                                            <td style={{ padding: '8px', textAlign: 'center' }}>
+                                                <button onClick={() => deleteItem(item.id)} style={{ padding: '4px 8px', backgroundColor: '#fee2e2', color: '#dc2626', border: '1px solid #fca5a5', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}>削除</button>
+                                            </td>
+                                        </tr>
+                                    ));
+                                })()}
                             </tbody>
                         </table>
                     )}

@@ -28,13 +28,12 @@ export default function PrintableOrder() {
         fetchOrder();
     }, [orderId]);
 
-    // 明細を集約する
     const consolidatedLines = React.useMemo(() => {
         if (!order) return [];
-        const map: Record<string, { itemId: string, itemName: string, qty: number, unit: string, price: number, imageUrl?: string }> = {};
+        const map: Record<string, { itemId: string, itemName: string, qty: number, unit: string, price: number, imageUrl?: string, materialCode?: string | null }> = {};
         order.lines.forEach(l => {
             if (!map[l.itemId]) {
-                map[l.itemId] = { itemId: l.itemId, itemName: l.itemName, qty: 0, unit: l.unit, price: l.price, imageUrl: l.item?.imageUrl };
+                map[l.itemId] = { itemId: l.itemId, itemName: l.itemName, qty: 0, unit: l.unit, price: l.price, imageUrl: l.item?.imageUrl, materialCode: l.item?.materialCode };
             }
             map[l.itemId].qty += l.qty;
         });
@@ -152,7 +151,7 @@ export default function PrintableOrder() {
                                     {line.imageUrl && <img src={line.imageUrl} style={{ width: '40px', height: '40px', objectFit: 'contain' }} />}
                                 </td>
                             )}
-                            <td style={{ border: '1px solid #000', padding: '10px', fontSize: '13px' }}>{line.itemId}</td>
+                            <td style={{ border: '1px solid #000', padding: '10px', fontSize: '13px' }}>{line.materialCode || line.itemId}</td>
                             <td style={{ border: '1px solid #000', padding: '10px', fontWeight: 'bold' }}>{line.itemName}</td>
                             <td style={{ border: '1px solid #000', padding: '10px', textAlign: 'center', fontSize: '18px', fontWeight: 'bold' }}>{line.qty}</td>
                             <td style={{ border: '1px solid #000', padding: '10px', textAlign: 'center' }}>{line.unit}</td>

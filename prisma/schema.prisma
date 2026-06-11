@@ -12,6 +12,7 @@ datasource db {
 
 model Item {
   id                String   @id
+  materialCode      String?  @unique
   category          String
   name              String
   displayName       String?

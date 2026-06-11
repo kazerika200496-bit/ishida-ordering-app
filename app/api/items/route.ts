@@ -28,12 +28,39 @@ export async function PATCH(request: Request) {
         const { id, ...data } = await request.json();
         
         if (!data.name || data.name.trim() === '') {
-            return NextResponse.json({ error: 'Name is required' }, { status: 400 });
+            return NextResponse.json({ error: '品目名は必須です。' }, { status: 400 });
         }
 
         // Ensure new IDs are created properly if they come from the frontend as 'new-...'
         const isNew = id.startsWith('new-');
         const finalId = isNew ? `item-${Date.now()}-${Math.floor(Math.random() * 1000)}` : id;
+
+        // Process materialCode
+        let materialCode = data.materialCode;
+        if (typeof materialCode === 'string') {
+            materialCode = materialCode.trim();
+        }
+        
+        // If empty or null, default to finalId as requested
+        if (!materialCode) {
+            materialCode = finalId;
+        }
+        data.materialCode = materialCode;
+
+        // Validate materialCode uniqueness
+        if (materialCode !== null) {
+            const existing = await prisma.item.findFirst({
+                where: {
+                    materialCode: materialCode,
+                    id: { not: finalId }
+                }
+            });
+            if (existing) {
+                return NextResponse.json({ 
+                    error: `この資材IDはすでに使用されています。別の資材IDを入力してください。 (登録済みの品目: ${existing.name})` 
+                }, { status: 400 });
+            }
+        }
 
         const item = await prisma.item.upsert({
             where: { id: finalId },
@@ -44,9 +71,9 @@ export async function PATCH(request: Request) {
             }
         });
         return NextResponse.json(item);
-    } catch (error) {
+    } catch (error: any) {
         console.error('Item update error:', error);
-        return NextResponse.json({ error: 'Failed to update item' }, { status: 500 });
+        return NextResponse.json({ error: error?.message || 'Failed to update item' }, { status: 500 });
     }
 }
 
