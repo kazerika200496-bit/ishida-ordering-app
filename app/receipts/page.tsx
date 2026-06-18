@@ -60,11 +60,11 @@ export default async function ReceiptsDashboard({ searchParams }: { searchParams
 
     return (
         <div className="container">
-            <header>
+            <header className="mobile-header">
                 <div>
                     <div className="header-title">いしだクリーニング 領収書管理</div>
                 </div>
-                <div style={{ display: 'flex', gap: '10px' }}>
+                <div style={{ display: 'flex', gap: '10px' }} className="mobile-nav">
                     <Link href="/receipts/upload" className="nav-link-important" style={{ backgroundColor: '#fff', color: 'var(--primary-color)' }}>
                         ＋ 新規アップロード
                     </Link>
@@ -74,38 +74,38 @@ export default async function ReceiptsDashboard({ searchParams }: { searchParams
             <div className="card" style={{ padding: '20px' }}>
                 <ReceiptFilters />
                 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }} className="mobile-stack">
                     <h2 style={{ fontSize: '18px', margin: 0, color: '#333' }}>領収書一覧</h2>
                     <ExportButton />
                 </div>
 
-                <div style={{ overflowX: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '900px' }}>
+                <div className="receipt-table-container">
+                    <table className="responsive-table">
                         <thead>
                             <tr style={{ backgroundColor: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
                                 <th style={{ padding: '12px', fontSize: '14px', color: '#475569' }}>日付</th>
                                 <th style={{ padding: '12px', fontSize: '14px', color: '#475569' }}>支払先</th>
                                 <th style={{ padding: '12px', fontSize: '14px', color: '#475569' }}>勘定科目</th>
-                                <th style={{ padding: '12px', fontSize: '14px', color: '#475569', textAlign: 'right' }}>金額</th>
-                                <th style={{ padding: '12px', fontSize: '14px', color: '#475569', textAlign: 'center' }}>ステータス</th>
+                                <th style={{ padding: '12px', fontSize: '14px', color: '#475569', textAlign: 'right' }} className="hide-mobile">金額</th>
+                                <th style={{ padding: '12px', fontSize: '14px', color: '#475569', textAlign: 'center' }} className="hide-mobile">ステータス</th>
                                 <th style={{ padding: '12px', fontSize: '14px', color: '#475569', textAlign: 'center' }}>操作</th>
                             </tr>
                         </thead>
                         <tbody>
                             {receipts.length === 0 ? (
                                 <tr>
-                                    <td colSpan={6} style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>
+                                    <td colSpan={6} className="empty-cell" style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>
                                         対象の領収書データがありません。
                                     </td>
                                 </tr>
                             ) : (
                                 receipts.map((receipt: any) => (
                                     <tr key={receipt.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                                        <td style={{ padding: '12px', fontWeight: 'bold', color: '#334155' }}>
+                                        <td style={{ padding: '12px', fontWeight: 'bold', color: '#334155' }} data-label="日付">
                                             {receipt.receiptDate ? new Date(receipt.receiptDate).toLocaleDateString('ja-JP') : '-'}
                                         </td>
-                                        <td style={{ padding: '12px', color: '#334155' }}>{receipt.payee || '-'}</td>
-                                        <td style={{ padding: '12px', color: '#334155' }}>
+                                        <td style={{ padding: '12px', color: '#334155' }} data-label="支払先">{receipt.payee || '-'}</td>
+                                        <td style={{ padding: '12px', color: '#334155' }} data-label="勘定科目">
                                             {receipt.accountName ? (
                                                 <div>
                                                     <div>{receipt.accountCode ? `${receipt.accountCode} ${receipt.accountName}` : receipt.accountName}</div>
@@ -117,15 +117,16 @@ export default async function ReceiptsDashboard({ searchParams }: { searchParams
                                                 </div>
                                             ) : '-'}
                                         </td>
-                                        <td style={{ padding: '12px', textAlign: 'right', fontWeight: 'bold', color: '#334155' }}>
+                                        <td style={{ padding: '12px', textAlign: 'right', fontWeight: 'bold', color: '#334155' }} data-label="金額" className="price-cell">
                                             {receipt.amount ? `¥${receipt.amount.toLocaleString()}` : '-'}
                                         </td>
-                                        <td style={{ padding: '12px', textAlign: 'center' }}>
+                                        <td style={{ padding: '12px', textAlign: 'center' }} data-label="ステータス" className="status-cell">
                                             {getStatusBadge(receipt.status)}
                                         </td>
-                                        <td style={{ padding: '12px', textAlign: 'center' }}>
+                                        <td style={{ padding: '12px', textAlign: 'center' }} className="action-cell">
                                             <Link
                                                 href={`/receipts/${receipt.id}`}
+                                                className="btn-action"
                                                 style={{ color: 'var(--primary-color)', textDecoration: 'none', fontWeight: 'bold', padding: '6px 12px', borderRadius: '4px', backgroundColor: '#eff6ff' }}
                                             >
                                                 確認・編集

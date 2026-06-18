@@ -42,7 +42,7 @@ export default function ReceiptFilters() {
     };
 
     return (
-        <form onSubmit={handleApply} style={{
+        <form onSubmit={handleApply} className="filter-form" style={{
             display: 'flex',
             flexWrap: 'wrap',
             gap: '15px',

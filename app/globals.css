@@ -131,35 +131,135 @@ nav {
     }
 }
 
-@media (max-width: 600px) {
-    header {
-        flex-direction: column;
-        gap: 15px;
-        align-items: flex-start;
-        padding: 15px;
+/* Table & List Responsiveness */
+.receipt-table-container {
+    overflow-x: auto;
+}
+
+.responsive-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    min-width: 900px; /* Default for desktop */
+}
+
+@media (max-width: 768px) {
+    .mobile-header {
+        flex-direction: row !important; /* Keep horizontal on tablets/phones for receipts if possible */
+        justify-content: space-between !important;
+        align-items: center !important;
+        padding: 10px 15px !important;
     }
 
-    nav {
-        flex-wrap: wrap;
-        width: 100%;
-        justify-content: flex-start;
+    .mobile-nav {
+        gap: 5px !important;
     }
 
-    .header-title {
-        font-size: 18px;
+    .mobile-nav .nav-link-important {
+        padding: 6px 10px !important;
+        font-size: 13px !important;
     }
 
-    .container {
-        padding: 5px;
+    .mobile-stack {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 15px !important;
     }
 
-    .mobile-floating-footer {
+    .responsive-table {
+        min-width: 100% !important;
+    }
+
+    .responsive-table thead {
+        display: none; /* Hide headers on mobile */
+    }
+
+    .responsive-table tr {
+        display: block;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        margin-bottom: 15px;
+        padding: 10px;
+        background-color: #f8fafc;
+    }
+
+    .responsive-table td {
         display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 5px !important;
+        border: none !important;
+        font-size: 14px;
+        text-align: right !important;
     }
 
-    .right-panel {
-        margin-bottom: 60px;
-        /* Space for floating footer */
+    .responsive-table td::before {
+        content: attr(data-label);
+        font-weight: bold;
+        color: #64748b;
+        margin-right: 10px;
+        text-align: left;
+        font-size: 12px;
+        flex-shrink: 0;
+    }
+
+    .responsive-table td.action-cell {
+        justify-content: center;
+        border-top: 1px solid #e2e8f0 !important;
+        margin-top: 5px;
+        padding-top: 15px !important;
+    }
+
+    .responsive-table .btn-action {
+        width: 100%;
+        text-align: center;
+        padding: 10px !important;
+    }
+}
+
+/* Filter & Export Layouts */
+.filter-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    align-items: center;
+}
+
+.export-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+@media (max-width: 600px) {
+    .filter-form {
+        flex-direction: column !important;
+        align-items: stretch !important;
+    }
+
+    .filter-form > div {
+        width: 100% !important;
+        justify-content: space-between !important;
+    }
+
+    .filter-form input[type="text"], 
+    .filter-form input[type="month"] {
+        flex: 1 !important;
+    }
+
+    .export-container {
+        width: 100% !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+    }
+
+    .export-container input[type="month"] {
+        width: 100% !important;
+    }
+
+    .export-container button {
+        width: 100% !important;
+        justify-content: center !important;
     }
 }
 

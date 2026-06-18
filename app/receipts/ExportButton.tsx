@@ -74,7 +74,7 @@ export default function ExportButton() {
     };
 
     return (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div className="export-container" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <input
                 type="month"
                 value={month}

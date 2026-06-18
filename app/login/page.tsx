@@ -49,6 +49,7 @@ export default function LoginPage() {
             <div style={{
                 width: '100%',
                 maxWidth: '440px',
+                minWidth: '280px',
                 backgroundColor: '#fff',
                 borderRadius: '12px',
                 boxShadow: '0 8px 30px rgba(0, 0, 0, 0.1)',
