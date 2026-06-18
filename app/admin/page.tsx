@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { Item, Location, Supplier } from '../types';
 
@@ -15,6 +15,119 @@ const CATEGORIES = [
     '看板・ボード',
     'その他'
 ];
+
+const ItemImageUpload = ({ 
+    item, 
+    onUpdate 
+}: { 
+    item: Item, 
+    onUpdate: (url: string) => void 
+}) => {
+    const [isUploading, setIsUploading] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // Limit size to 5MB
+        if (file.size > 5 * 1024 * 1024) {
+            alert('ファイルサイズは5MB以下にしてください。');
+            return;
+        }
+
+        setIsUploading(true);
+        try {
+            const res = await fetch(`/api/upload?filename=${encodeURIComponent(file.name)}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': file.type,
+                },
+                body: file,
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Upload failed');
+            onUpdate(data.url);
+        } catch (err: any) {
+            alert('アップロードに失敗しました: ' + err.message);
+        } finally {
+            setIsUploading(false);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+    };
+
+    return (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div 
+                style={{ 
+                    width: '50px', 
+                    height: '50px', 
+                    backgroundColor: '#f0f0f0', 
+                    borderRadius: '4px', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center', 
+                    overflow: 'hidden', 
+                    flexShrink: 0,
+                    border: '1px solid #ddd',
+                    cursor: 'pointer',
+                    position: 'relative'
+                }} 
+                onClick={() => fileInputRef.current?.click()}
+                title="画像をクリックしてアップロード"
+            >
+                {isUploading ? (
+                    <div style={{ fontSize: '10px', textAlign: 'center' }}>
+                        <div className="spinner" style={{ marginBottom: '2px' }}>⌛</div>
+                        Loading
+                    </div>
+                ) : item.imageUrl ? (
+                    <img src={item.imageUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="品目写真" />
+                ) : (
+                    <div style={{ textAlign: 'center' }}>
+                        <span style={{ fontSize: '20px', color: '#ccc' }}>🖼️</span>
+                        <div style={{ fontSize: '8px', color: '#999' }}>画像なし</div>
+                    </div>
+                )}
+            </div>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <input 
+                    value={item.imageUrl || ''} 
+                    placeholder="URLを直接入力またはアップロード" 
+                    onChange={e => onUpdate(e.target.value)} 
+                    style={{ width: '100%', padding: '5px', border: '1px solid #eee', fontSize: '11px', borderRadius: '4px' }} 
+                />
+                <button 
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploading}
+                    style={{ 
+                        padding: '4px 8px', 
+                        fontSize: '11px', 
+                        backgroundColor: '#fff', 
+                        border: '1px solid #1a73e8', 
+                        color: '#1a73e8',
+                        borderRadius: '4px', 
+                        cursor: 'pointer',
+                        fontWeight: 'bold',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '4px'
+                    }}
+                >
+                    {isUploading ? '⌛ 送信中...' : '📸 写真を選択・撮影'}
+                </button>
+            </div>
+            <input 
+                type="file" 
+                ref={fileInputRef} 
+                onChange={handleFileChange} 
+                accept="image/*" 
+                style={{ display: 'none' }} 
+            />
+        </div>
+    );
+};
 
 export default function AdminPage() {
     const [activeTab, setActiveTab] = useState<'locations' | 'suppliers' | 'items'>('items');
@@ -300,16 +413,7 @@ export default function AdminPage() {
                                                 </select>
                                             </td>
                                             <td style={{ padding: '8px' }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                    <div style={{ width: '40px', height: '40px', backgroundColor: '#f0f0f0', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
-                                                        {item.imageUrl ? (
-                                                            <img src={item.imageUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
-                                                        ) : (
-                                                            <span style={{ fontSize: '18px', color: '#ccc' }}>🖼️</span>
-                                                        )}
-                                                    </div>
-                                                    <input value={item.imageUrl || ''} placeholder="https://..." onChange={e => updateItem(item.id, 'imageUrl', e.target.value)} style={{ flex: 1, padding: '5px', border: '1px solid #eee', fontSize: '12px' }} />
-                                                </div>
+                                                <ItemImageUpload item={item} onUpdate={url => updateItem(item.id, 'imageUrl', url)} />
                                             </td>
                                             <td style={{ padding: '8px' }}>
                                                 <input value={item.name} onChange={e => updateItem(item.id, 'name', e.target.value)} style={{ width: '100%', padding: '5px', border: '1px solid #eee' }} placeholder="入力必須" />
