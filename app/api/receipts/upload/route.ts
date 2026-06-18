@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
+import { getSession } from '@/lib/auth';
 
 const prisma = new PrismaClient();
 
@@ -12,9 +13,13 @@ async function fileToBase64(file: File): Promise<string> {
 
 export async function POST(request: NextRequest) {
     try {
+        const session = await getSession();
+        // ログインしていない場合でもアップロード自体は許可するが、createdById は null になる
+        // （本来は requireAuth を使うべきだが、現状の可用性を優先）
+        const userId = (session?.sub as string) || null;
+
         const formData = await request.formData();
         const file = formData.get('file') as File;
-        const createdById = formData.get('createdById') as string | null;
 
         if (!file) {
             return NextResponse.json({ error: 'No file provided' }, { status: 400 });
@@ -49,7 +54,7 @@ export async function POST(request: NextRequest) {
                 fileName: file.name,
                 fileSize: file.size,
                 status: 'UPLOADED', 
-                createdById: createdById || null,
+                createdById: userId,
                 
                 // OCR結果の反映処理（現在は全てnullが入るため空欄になる）
                 payee: ocrResult.payee,
