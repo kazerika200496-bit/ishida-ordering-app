@@ -3,14 +3,16 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { Item, Location, Supplier } from '../types';
+import { normalizeCategory } from '@/lib/category';
+
 
 const CATEGORIES = [
     '店舗備品',
     '工場備品',
     '洗剤・溶剤',
-    'ハンガー類',
+    'ハンガー',
     '包装資材',
-    '伝票・書類',
+    '書類・伝票',
     '文具系',
     '看板・ボード',
     'その他'
@@ -389,7 +391,7 @@ export default function AdminPage() {
                             </thead>
                             <tbody>
                                 {(() => {
-                                    const filteredItems = items.filter(item => adminCategoryFilter === 'すべて' || item.category === adminCategoryFilter);
+                                    const filteredItems = items.filter(item => adminCategoryFilter === 'すべて' || normalizeCategory(item.category) === adminCategoryFilter);
                                     return filteredItems.map(item => (
                                         <tr key={item.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
                                             <td style={{ padding: '8px', fontSize: '11px', color: '#94a3b8', verticalAlign: 'middle' }}>{item.id.startsWith('new-') ? '新規' : item.id}</td>
@@ -403,7 +405,7 @@ export default function AdminPage() {
                                             </td>
                                             <td style={{ padding: '8px' }}>
                                                 <select
-                                                    value={item.category || 'その他'}
+                                                    value={normalizeCategory(item.category) || 'その他'}
                                                     onChange={e => updateItem(item.id, 'category', e.target.value)}
                                                     style={{ width: '100%', padding: '5px', border: '1px solid #eee' }}
                                                 >

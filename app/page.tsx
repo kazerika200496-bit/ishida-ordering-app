@@ -11,6 +11,8 @@ import {
     MOCK_ORDERS
 } from './mockData';
 import { Item, OrderItem, Location, Supplier, Order } from './types';
+import { normalizeCategory } from '@/lib/category';
+
 
 export default function Home() {
     const router = useRouter();
@@ -149,7 +151,7 @@ export default function Home() {
     }, []);
 
     // --- Derived Data ---
-    const categories = ['すべて', 'おすすめ', ...Array.from(new Set(items.map(i => i.category)))];
+    const categories = ['すべて', 'おすすめ', ...Array.from(new Set(items.map(i => normalizeCategory(i.category))))];
 
     const availableDestinations = useMemo(() => {
         if (!sourceId) return [];
@@ -200,7 +202,7 @@ export default function Home() {
     const filteredItems = useMemo(() => {
         return items.filter(item => {
             const matchesCategory = selectedCategory === 'すべて' ||
-                (selectedCategory === 'おすすめ' ? recommendedItemIds.includes(item.id) : item.category === selectedCategory);
+                (selectedCategory === 'おすすめ' ? recommendedItemIds.includes(item.id) : normalizeCategory(item.category) === selectedCategory);
             const itemName = item.name || '';
             const itemId = item.id || '';
             const materialCode = item.materialCode || '';
@@ -588,7 +590,7 @@ export default function Home() {
                                             )}
                                         </div>
                                         <div style={{ flex: 1 }}>
-                                            <div style={{ fontSize: '11px', color: '#999' }}>{item.category} / {item.materialCode || item.id}</div>
+                                            <div style={{ fontSize: '11px', color: '#999' }}>{normalizeCategory(item.category)} / {item.materialCode || item.id}</div>
                                             <div style={{ fontSize: '15px', fontWeight: 'bold', margin: '2px 0', lineHeight: '1.2' }}>{item.displayName || item.name}</div>
                                             {!isStoreRole && (
                                                 <div style={{ fontSize: '14px', color: '#1a73e8', fontWeight: 'bold' }}>

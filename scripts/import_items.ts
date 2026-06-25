@@ -1,5 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import crypto from 'crypto';
+import { normalizeCategory } from '../lib/category';
+
 
 const prisma = new PrismaClient();
 
@@ -42,7 +44,7 @@ async function main() {
         // Splitting safely (assuming no complex quoted commas inside names based on earlier preview)
         const columns = lines[i].split(',');
         const itemId = columns[0]?.trim(); // Maps to `id` (e.g. I0001)
-        const category = columns[1]?.trim() || 'その他';
+        const category = normalizeCategory(columns[1]?.trim() || 'その他');
         const name = columns[2]?.trim();
         const unit = columns[3]?.trim() || '個';
         const activeFlag = columns[4]?.trim().toUpperCase();

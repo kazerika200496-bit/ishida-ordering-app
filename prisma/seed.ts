@@ -13,8 +13,8 @@ async function main() {
     // ITEMS
     const items = [
         // 共和産業
-        { id: 'I0001', category: 'ハンガー類', name: '白ハンガー', displayName: '白ハンガー', unit: '本', price: 10, imageUrl: 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=200', defaultSupplierId: 'SUP001' },
-        { id: 'I0002', category: 'ハンガー類', name: 'ワイシャツハンガー', displayName: 'Yシャツハンガー', unit: '本', price: 8, imageUrl: 'https://images.unsplash.com/photo-1591123720164-de1348028a82?w=200', defaultSupplierId: 'SUP001' },
+        { id: 'I0001', category: 'ハンガー', name: '白ハンガー', displayName: '白ハンガー', unit: '本', price: 10, imageUrl: 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=200', defaultSupplierId: 'SUP001' },
+        { id: 'I0002', category: 'ハンガー', name: 'ワイシャツハンガー', displayName: 'Yシャツハンガー', unit: '本', price: 8, imageUrl: 'https://images.unsplash.com/photo-1591123720164-de1348028a82?w=200', defaultSupplierId: 'SUP001' },
 
     ];
 
