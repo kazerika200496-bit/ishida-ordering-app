@@ -8,6 +8,7 @@ import { FAVORITE_ACCOUNTS, TAX_CATEGORIES } from '@/lib/constants';
 export default function ReceiptForm({ receipt }: { receipt: any }) {
     const router = useRouter();
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     // States
     const [payee, setPayee] = useState(receipt.payee || '');
@@ -91,6 +92,33 @@ export default function ReceiptForm({ receipt }: { receipt: any }) {
             alert('通信エラーが発生しました');
         } finally {
             setIsSubmitting(false);
+        }
+    };
+
+    const handleDelete = async () => {
+        if (!confirm('この領収書データを完全に削除しますか？\n削除したデータは元に戻せません。')) {
+            return;
+        }
+
+        setIsDeleting(true);
+
+        try {
+            const res = await fetch(`/api/receipts/${receipt.id}`, {
+                method: 'DELETE',
+            });
+            const data = await res.json();
+
+            if (res.ok && data.success) {
+                alert('削除しました。');
+                router.push('/receipts');
+                router.refresh();
+            } else {
+                alert(data.error || '削除に失敗しました。');
+            }
+        } catch (err) {
+            alert('通信エラーが発生しました。');
+        } finally {
+            setIsDeleting(false);
         }
     };
 
@@ -246,6 +274,19 @@ export default function ReceiptForm({ receipt }: { receipt: any }) {
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '30px', paddingTop: '20px', borderTop: '1px solid #e2e8f0' }}>
+                <button 
+                    type="button" 
+                    onClick={handleDelete}
+                    disabled={isDeleting || isSubmitting}
+                    className="btn-outline"
+                    style={{ 
+                        padding: '10px 20px', borderRadius: '6px', fontWeight: 'bold', cursor: (isDeleting || isSubmitting) ? 'not-allowed' : 'pointer',
+                        borderColor: '#ef4444', color: '#ef4444', marginRight: 'auto',
+                        opacity: (isDeleting || isSubmitting) ? 0.5 : 1
+                    }}
+                >
+                    {isDeleting ? '削除中...' : '🗑️ 削除する'}
+                </button>
                 <button 
                     type="button" 
                     onClick={() => router.push('/receipts')} 
