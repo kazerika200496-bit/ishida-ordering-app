@@ -24,8 +24,10 @@ export async function middleware(request: NextRequest) {
             algorithms: ['HS256'],
         });
 
-        // Check admin routes
-        const isAdminRoute = path.startsWith('/admin') || path.startsWith('/receipts') || path.startsWith('/api/receipts');
+        // Check admin routes (excluding upload page and upload API for store users)
+        const isUploadRoute = path === '/receipts/upload' || path === '/api/receipts/upload';
+        const isAdminRoute = (path.startsWith('/admin') || path.startsWith('/receipts') || path.startsWith('/api/receipts')) && !isUploadRoute;
+
         if (isAdminRoute && payload.role !== 'admin') {
             // Force redirect non-admins back to the store ordering dashboard
             return NextResponse.redirect(new URL('/', request.url));

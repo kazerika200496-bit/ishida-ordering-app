@@ -14,9 +14,13 @@ async function fileToBase64(file: File): Promise<string> {
 export async function POST(request: NextRequest) {
     try {
         const session = await getSession();
-        // ログインしていない場合でもアップロード自体は許可するが、createdById は null になる
-        // （本来は requireAuth を使うべきだが、現状の可用性を優先）
-        const userId = (session?.sub as string) || null;
+        if (!session) {
+            return NextResponse.json(
+                { error: 'ログインセッションが切れました。ログイン画面から再ログインしてください。' },
+                { status: 401 }
+            );
+        }
+        const userId = session.sub as string;
 
         const formData = await request.formData();
         const file = formData.get('file') as File;

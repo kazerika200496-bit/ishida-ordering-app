@@ -153,7 +153,28 @@ export default function ReceiptUploadPage() {
 
                         {error && (
                             <div className="alert alert-error" style={{ padding: '15px', backgroundColor: '#fef2f2', border: '1px solid #fecaca', color: '#ef4444', borderRadius: '8px', marginBottom: '20px', textAlign: 'left' }}>
-                                {error}
+                                <div style={{ fontWeight: 'bold' }}>{error}</div>
+                                {(error.includes('ログイン') || error.includes('セッション')) && (
+                                    <div style={{ marginTop: '12px' }}>
+                                        <Link 
+                                            href="/login" 
+                                            style={{ 
+                                                display: 'inline-block', 
+                                                textDecoration: 'none', 
+                                                textAlign: 'center', 
+                                                padding: '8px 16px', 
+                                                fontSize: '14px', 
+                                                backgroundColor: '#ef4444', 
+                                                color: '#fff', 
+                                                borderRadius: '6px',
+                                                fontWeight: 'bold',
+                                                boxShadow: '0 2px 4px rgba(239, 68, 68, 0.2)'
+                                            }}
+                                        >
+                                            ログイン画面へ移動
+                                        </Link>
+                                    </div>
+                                )}
                             </div>
                         )}
 
