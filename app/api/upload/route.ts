@@ -32,9 +32,31 @@ export async function POST(request: Request): Promise<NextResponse> {
 
         // If BLOB_READ_WRITE_TOKEN is missing, return a clear error.
         // Base64 fallback is disabled to prevent database size issues.
-        if (!process.env.BLOB_READ_WRITE_TOKEN) {
+        const token = process.env.BLOB_READ_WRITE_TOKEN;
+        const hasBlobToken = typeof token === 'string' && token.length > 0;
+        const tokenLength = token ? token.length : 0;
+
+        // Collect safe diagnostic info
+        const envKeys = Object.keys(process.env);
+        const blobRelatedKeys = envKeys.filter(k => k.toUpperCase().includes('BLOB'));
+
+        const diagnostics = {
+            hasBlobToken,
+            tokenLength,
+            blobRelatedKeys,
+            runtime: typeof (globalThis as any).EdgeRuntime !== 'undefined' ? 'Edge' : 'Node.js',
+            nodeEnv: process.env.NODE_ENV,
+        };
+
+        // Server-side diagnostic log (strictly adheres to privacy instructions)
+        console.log('[DIAGNOSTIC UPLOAD]', diagnostics);
+
+        if (!hasBlobToken) {
             return NextResponse.json(
-                { error: '画像のアップロード用トークン(BLOB_READ_WRITE_TOKEN)が設定されていません。本番環境の環境変数またはローカルの.envファイルを確認してください。' },
+                { 
+                    error: '画像のアップロード用トークン(BLOB_READ_WRITE_TOKEN)が設定されていません。本番環境の環境変数またはローカルの.envファイルを確認してください。',
+                    diagnostics
+                },
                 { status: 500 }
             );
         }
