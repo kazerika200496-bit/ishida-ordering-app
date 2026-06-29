@@ -21,12 +21,6 @@ const safeContentType =
     contentType === 'image/gif' ? 'image/gif' :
     'image/jpeg';
 
-const safeContentType =
-    contentType === 'image/png' ? 'image/png' :
-    contentType === 'image/webp' ? 'image/webp' :
-    contentType === 'image/gif' ? 'image/gif' :
-    'image/jpeg';
-
 
 const originalFilename = filename;
 const extFromName = originalFilename.split('.').pop()?.toLowerCase();
