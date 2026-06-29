@@ -40,7 +40,7 @@ const ItemImageUpload = ({
 
         setIsUploading(true);
         try {
-            const res = await fetch(`/api/upload?filename=${encodeURIComponent(file.name)}`, {
+            const res = await fetch('/api/upload', {
                 method: 'POST',
                 headers: {
                     'Content-Type': file.type,
