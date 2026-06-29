@@ -51,7 +51,7 @@ const ItemImageUpload = ({
             if (!res.ok) throw new Error(data.error || 'Upload failed');
             onUpdate(data.url);
         } catch (err: any) {
-            alert('アップロードに失敗しました: ' + err.message);
+            alert('画像の保存に失敗しました。もう一度お試しください。改善しない場合は管理者に連絡してください。\n(詳細: ' + err.message + ')');
         } finally {
             setIsUploading(false);
             if (fileInputRef.current) fileInputRef.current.value = '';

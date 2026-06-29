@@ -27,6 +27,13 @@ export async function PATCH(request: Request) {
     try {
         const { id, ...data } = await request.json();
         
+        if (data.imageUrl && data.imageUrl.startsWith('data:')) {
+            return NextResponse.json(
+                { error: '画像の保存に失敗しました。画像データが正しい形式(URL)ではありません。画像をもう一度選択・撮影し直してください。' },
+                { status: 400 }
+            );
+        }
+
         if (!data.name || data.name.trim() === '') {
             return NextResponse.json({ error: '品目名は必須です。' }, { status: 400 });
         }

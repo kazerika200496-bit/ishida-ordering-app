@@ -30,14 +30,13 @@ export async function POST(request: Request): Promise<NextResponse> {
             return NextResponse.json({ error: 'File size exceeds 5MB limit.' }, { status: 400 });
         }
 
-        // Fallback to Base64 Data URL if BLOB_READ_WRITE_TOKEN is missing.
-        // This is intended for local development. Vercel Blob is recommended for production.
+        // If BLOB_READ_WRITE_TOKEN is missing, return a clear error.
+        // Base64 fallback is disabled to prevent database size issues.
         if (!process.env.BLOB_READ_WRITE_TOKEN) {
-            const buffer = Buffer.from(arrayBuffer);
-            const base64 = buffer.toString('base64');
-            const dataUrl = `data:${contentType};base64,${base64}`;
-            
-            return NextResponse.json({ url: dataUrl });
+            return NextResponse.json(
+                { error: '画像のアップロード用トークン(BLOB_READ_WRITE_TOKEN)が設定されていません。本番環境の環境変数またはローカルの.envファイルを確認してください。' },
+                { status: 500 }
+            );
         }
 
         // Upload to Vercel Blob (Public access for item images)
