@@ -15,6 +15,12 @@ export async function POST(request: Request): Promise<NextResponse> {
         const filename = searchParams.get('filename') || 'upload.jpg';
         const contentType = request.headers.get('content-type') || 'image/jpeg';
 
+const safeContentType =
+    contentType === 'image/png' ? 'image/png' :
+    contentType === 'image/webp' ? 'image/webp' :
+    contentType === 'image/gif' ? 'image/gif' :
+    'image/jpeg';
+
 
 const originalFilename = filename;
 const extFromName = originalFilename.split('.').pop()?.toLowerCase();
@@ -79,9 +85,9 @@ const safeFilename = `item-images/${Date.now()}-${crypto.randomUUID()}.${ext}`;
 
         // Upload to Vercel Blob (Public access for item images)
        const blob = await put(safeFilename, arrayBuffer, {
-            access: 'public',
-            contentType: contentType,
-        });
+    access: 'public',
+    contentType: safeContentType,
+});
 
         return NextResponse.json(blob);
     } catch (error: any) {
