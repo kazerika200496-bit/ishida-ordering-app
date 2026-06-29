@@ -15,6 +15,22 @@ export async function POST(request: Request): Promise<NextResponse> {
         const filename = searchParams.get('filename') || 'upload.jpg';
         const contentType = request.headers.get('content-type') || 'image/jpeg';
 
+
+const originalFilename = filename;
+const extFromName = originalFilename.split('.').pop()?.toLowerCase();
+
+const extFromContentType =
+    contentType === 'image/png' ? 'png' :
+    contentType === 'image/webp' ? 'webp' :
+    contentType === 'image/gif' ? 'gif' :
+    'jpg';
+
+const ext = extFromName && /^[a-z0-9]+$/.test(extFromName)
+    ? extFromName
+    : extFromContentType;
+
+const safeFilename = `item-images/${Date.now()}-${crypto.randomUUID()}.${ext}`;
+
         // 1. Validation: Check if it's an image
         if (!contentType.startsWith('image/')) {
             return NextResponse.json({ error: 'Only image files are allowed.' }, { status: 400 });
@@ -62,7 +78,7 @@ export async function POST(request: Request): Promise<NextResponse> {
         }
 
         // Upload to Vercel Blob (Public access for item images)
-        const blob = await put(filename, arrayBuffer, {
+       const blob = await put(safeFilename, arrayBuffer, {
             access: 'public',
             contentType: contentType,
         });
