@@ -40,10 +40,16 @@ const ItemImageUpload = ({
 
         setIsUploading(true);
         try {
+                      const safeContentType =
+                file.type === 'image/png' ? 'image/png' :
+                file.type === 'image/webp' ? 'image/webp' :
+                file.type === 'image/gif' ? 'image/gif' :
+                'image/jpeg';
+
             const res = await fetch('/api/upload', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': file.type,
+                    'Content-Type': safeContentType,
                 },
                 body: file,
             });
