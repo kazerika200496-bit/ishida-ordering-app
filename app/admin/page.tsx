@@ -40,19 +40,10 @@ const ItemImageUpload = ({
 
         setIsUploading(true);
         try {
-                      const safeContentType =
-                file.type === 'image/png' ? 'image/png' :
-                file.type === 'image/webp' ? 'image/webp' :
-                file.type === 'image/gif' ? 'image/gif' :
-                'image/jpeg';
-
-            const res = await fetch('/api/upload', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': safeContentType,
-                },
-                body: file,
-            });
+                     const res = await fetch('/api/upload', {
+    method: 'POST',
+    body: file,
+});
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'Upload failed');
             onUpdate(data.url);
