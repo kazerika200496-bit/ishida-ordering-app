@@ -44,9 +44,21 @@ const ItemImageUpload = ({
     method: 'POST',
     body: file,
 });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error || 'Upload failed');
-            onUpdate(data.url);
+
+console.log('[ITEM IMAGE UPLOAD] status:', res.status, res.ok);
+
+const data = await res.json().catch((err) => {
+    console.error('[ITEM IMAGE UPLOAD] json parse failed:', err);
+    return {};
+});
+
+console.log('[ITEM IMAGE UPLOAD] response:', data);
+
+if (!res.ok) throw new Error(data.error || 'Upload failed');
+if (!data.url) throw new Error('Upload succeeded but URL was missing');
+
+onUpdate(data.url);
+
         } catch (err: any) {
             alert('画像の保存に失敗しました。もう一度お試しください。改善しない場合は管理者に連絡してください。\n(詳細: ' + err.message + ')');
         } finally {
@@ -259,13 +271,34 @@ export default function AdminPage() {
             const validSuppliers = suppliers.filter(s => s.name.trim() !== '');
 
             const itemPromises = validItems.map(async item => {
-                const res = await fetch('/api/items', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(item) });
-                if (!res.ok) {
-                    const data = await res.json().catch(() => ({}));
-                    throw new Error(data.error || `品目「${item.name}」の保存に失敗しました。`);
-                }
-                return res.json();
-            });
+    console.log('[ITEM SAVE] saving item:', {
+        id: item.id,
+        name: item.name,
+        imageUrl: item.imageUrl,
+        imageUrlPrefix: typeof item.imageUrl === 'string' ? item.imageUrl.slice(0, 30) : null,
+    });
+
+    const res = await fetch('/api/items', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(item),
+    });
+
+    console.log('[ITEM SAVE] response:', {
+        id: item.id,
+        name: item.name,
+        status: res.status,
+        ok: res.ok,
+    });
+
+    if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        console.error('[ITEM SAVE] failed:', data);
+        throw new Error(data.error || `品目「${item.name}」の保存に失敗しました。`);
+    }
+
+    return res.json();
+});
             const locPromises = validLocations.map(async loc => {
                 const res = await fetch('/api/locations', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(loc) });
                 if (!res.ok) {
