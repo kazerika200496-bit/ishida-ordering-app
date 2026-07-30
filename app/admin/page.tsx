@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, type ChangeEvent } from 'react';
 import Link from 'next/link';
 import { Item, Location, Supplier } from '../types';
 import { normalizeCategory } from '@/lib/category';
@@ -58,15 +58,28 @@ const generateNextMaterialCode = (category: string, existingItems: Item[]): stri
 
 const ItemImageUpload = ({ 
     item, 
-    onUpdate 
+    onUpdate,
+    onUploadingChange
 }: { 
     item: Item, 
-    onUpdate: (url: string) => void 
+    onUpdate: (url: string) => void,
+    onUploadingChange?: (uploading: boolean) => void
 }) => {
     const [isUploading, setIsUploading] = useState(false);
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+    const previewUrlRef = useRef<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    useEffect(() => {
+        return () => {
+            if (previewUrlRef.current) {
+                URL.revokeObjectURL(previewUrlRef.current);
+                previewUrlRef.current = null;
+            }
+        };
+    }, []);
+
+    const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
@@ -76,34 +89,59 @@ const ItemImageUpload = ({
             return;
         }
 
+        if (previewUrlRef.current) {
+            URL.revokeObjectURL(previewUrlRef.current);
+            previewUrlRef.current = null;
+        }
+
+        const objectUrl = URL.createObjectURL(file);
+        previewUrlRef.current = objectUrl;
+        setPreviewUrl(objectUrl);
         setIsUploading(true);
+        onUploadingChange?.(true);
+
         try {
-                     const res = await fetch('/api/upload', {
-    method: 'POST',
-    body: file,
-});
+            const res = await fetch('/api/upload', {
+                method: 'POST',
+                body: file,
+            });
 
-console.log('[ITEM IMAGE UPLOAD] status:', res.status, res.ok);
+            const data = await res.json().catch((err) => {
+                console.error('[ITEM IMAGE UPLOAD] json parse failed:', err);
+                return {} as Record<string, any>;
+            });
 
-const data = await res.json().catch((err) => {
-    console.error('[ITEM IMAGE UPLOAD] json parse failed:', err);
-    return {};
-});
+            if (!res.ok) {
+                throw new Error(data.error || 'Upload failed');
+            }
 
-console.log('[ITEM IMAGE UPLOAD] response:', data);
+            if (typeof data.url !== 'string' || !/^https?:\/\//.test(data.url) || data.url.startsWith('data:')) {
+                throw new Error('Upload returned invalid URL');
+            }
 
-if (!res.ok) throw new Error(data.error || 'Upload failed');
-if (!data.url) throw new Error('Upload succeeded but URL was missing');
-
-onUpdate(data.url);
-
+            onUpdate(data.url);
+            if (previewUrlRef.current) {
+                URL.revokeObjectURL(previewUrlRef.current);
+                previewUrlRef.current = null;
+            }
+            setPreviewUrl(null);
         } catch (err: any) {
             alert('画像の保存に失敗しました。もう一度お試しください。改善しない場合は管理者に連絡してください。\n(詳細: ' + err.message + ')');
+            if (previewUrlRef.current) {
+                URL.revokeObjectURL(previewUrlRef.current);
+                previewUrlRef.current = null;
+            }
+            setPreviewUrl(null);
         } finally {
             setIsUploading(false);
-            if (fileInputRef.current) fileInputRef.current.value = '';
+            onUploadingChange?.(false);
+            if (fileInputRef.current) {
+                fileInputRef.current.value = '';
+            }
         }
     };
+
+    const displayUrl = previewUrl ?? item.imageUrl;
 
     return (
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -130,8 +168,8 @@ onUpdate(data.url);
                         <div className="spinner" style={{ marginBottom: '2px' }}>⌛</div>
                         Loading
                     </div>
-                ) : item.imageUrl ? (
-                    <img src={item.imageUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="品目写真" />
+                ) : displayUrl ? (
+                    <img src={displayUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="品目写真" />
                 ) : (
                     <div style={{ textAlign: 'center' }}>
                         <span style={{ fontSize: '20px', color: '#ccc' }}>🖼️</span>
@@ -189,7 +227,22 @@ export default function AdminPage() {
     const [isDirty, setIsDirty] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
+    const [uploadingItemIds, setUploadingItemIds] = useState<Set<string>>(new Set());
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+    const isAnyImageUploading = uploadingItemIds.size > 0;
+
+    const setItemUploading = (itemId: string, uploading: boolean) => {
+        setUploadingItemIds(prev => {
+            const next = new Set(prev);
+            if (uploading) {
+                next.add(itemId);
+            } else {
+                next.delete(itemId);
+            }
+            return next;
+        });
+    };
 
     useEffect(() => {
         const fetchData = async () => {
@@ -328,6 +381,22 @@ export default function AdminPage() {
     };
 
     const handleSave = async () => {
+        if (isAnyImageUploading) {
+            alert('画像のアップロードが完了するまでお待ちください。');
+            return;
+        }
+
+        const invalidImageItem = items.find(
+            item =>
+                typeof item.imageUrl === 'string' &&
+                item.imageUrl.startsWith('data:')
+        );
+
+        if (invalidImageItem) {
+            alert(`「${invalidImageItem.name || invalidImageItem.materialCode}」の画像を選び直してください。`);
+            return;
+        }
+
         setIsSaving(true);
         try {
             const validItems = items.filter(i => i.name.trim() !== '');
@@ -425,10 +494,14 @@ export default function AdminPage() {
                 <div style={{ display: 'flex', gap: '8px' }}>
                     <button 
                         onClick={handleSave} 
-                        disabled={isSaving}
-                        style={{ padding: '10px 16px', backgroundColor: isSaving ? '#9ca3af' : '#34a853', color: '#fff', border: 'none', borderRadius: '8px', cursor: isSaving ? 'not-allowed' : 'pointer', fontWeight: 'bold' }}
+                        disabled={isSaving || isAnyImageUploading}
+                        style={{ padding: '10px 16px', backgroundColor: isSaving || isAnyImageUploading ? '#9ca3af' : '#34a853', color: '#fff', border: 'none', borderRadius: '8px', cursor: isSaving || isAnyImageUploading ? 'not-allowed' : 'pointer', fontWeight: 'bold' }}
                     >
-                        {isSaving ? '⏳ 保存中...' : '💾 変更を保存'}
+                        {isSaving
+                            ? '保存中...'
+                            : isAnyImageUploading
+                                ? '画像アップロード中...'
+                                : '変更を保存'}
                     </button>
                     <Link href="/" style={{ padding: '10px 16px', backgroundColor: '#6c757d', color: '#fff', textDecoration: 'none', borderRadius: '8px', fontWeight: 'bold', display: 'flex', alignItems: 'center' }}>⬅️ 戻る</Link>
                 </div>
@@ -509,7 +582,7 @@ export default function AdminPage() {
                                                 </select>
                                             </td>
                                             <td style={{ padding: '8px' }}>
-                                                <ItemImageUpload item={item} onUpdate={url => updateItem(item.id, 'imageUrl', url)} />
+                                                <ItemImageUpload item={item} onUpdate={url => updateItem(item.id, 'imageUrl', url)} onUploadingChange={uploading => setItemUploading(item.id, uploading)} />
                                             </td>
                                             <td style={{ padding: '8px' }}>
                                                 <input value={item.name} onChange={e => updateItem(item.id, 'name', e.target.value)} style={{ width: '100%', padding: '5px', border: '1px solid #eee' }} placeholder="入力必須" />
