@@ -48,34 +48,54 @@ const safeFilename = `item-images/${Date.now()}-${crypto.randomUUID()}.${ext}`;
 
         // 2. Validation: Check file size (Read into buffer to check size)
         const arrayBuffer = await request.arrayBuffer();
+        console.log('[UPLOAD DIAG] stage=arrayBuffer-read', {
+            byteLength: arrayBuffer.byteLength,
+            safeContentType
+        });
         if (arrayBuffer.byteLength > MAX_FILE_SIZE) {
             return NextResponse.json({ error: 'File size exceeds 5MB limit.' }, { status: 400 });
         }
 
-        // If BLOB_READ_WRITE_TOKEN is missing, return a clear error.
-        // Base64 fallback is disabled to prevent database size issues.
         const token = process.env.BLOB_READ_WRITE_TOKEN;
-        const hasBlobToken = typeof token === 'string' && token.length > 0;
-        const tokenLength = token ? token.length : 0;
+        const tokenExists = typeof token === 'string' && token.length > 0;
+        const tokenLength = tokenExists ? token.length : 0;
+        const tokenPrefixMatches = tokenExists && token.startsWith('vercel_blob_rw_');
+        const tokenIsAscii = tokenExists && [...token].every((ch) => ch.charCodeAt(0) <= 127);
+        const tokenHasWhitespace = tokenExists && /\s/.test(token);
+        const tokenHasQuotes = tokenExists && /['"]/.test(token);
+        const nonAsciiIndexes = tokenExists
+            ? [...token].map((ch, i) => (ch.charCodeAt(0) > 127 ? i : -1)).filter((i) => i !== -1)
+            : [];
 
-        // Collect safe diagnostic info
-        const envKeys = Object.keys(process.env);
-        const blobRelatedKeys = envKeys.filter(k => k.toUpperCase().includes('BLOB'));
+        const blobEnvKeys = Object.keys(process.env).filter((key) => /BLOB/i.test(key));
 
         const diagnostics = {
-            hasBlobToken,
+            tokenExists,
             tokenLength,
-            blobRelatedKeys,
+            tokenPrefixMatches,
+            tokenIsAscii,
+            tokenHasWhitespace,
+            tokenHasQuotes,
+            nonAsciiIndexes,
+            blobEnvKeys,
             runtime: typeof (globalThis as any).EdgeRuntime !== 'undefined' ? 'Edge' : 'Node.js',
             nodeEnv: process.env.NODE_ENV,
         };
 
-        // Server-side diagnostic log (strictly adheres to privacy instructions)
-        console.log('[DIAGNOSTIC UPLOAD]', diagnostics);
+        console.log('[UPLOAD DIAG] tokenDiagnostics', {
+            tokenExists,
+            tokenLength,
+            tokenPrefixMatches,
+            tokenIsAscii,
+            tokenHasWhitespace,
+            tokenHasQuotes,
+            nonAsciiIndexes
+        });
+        console.log('[UPLOAD DIAG] blobEnvKeys', blobEnvKeys);
 
-        if (!hasBlobToken) {
+        if (!tokenExists) {
             return NextResponse.json(
-                { 
+                {
                     error: '画像のアップロード用トークン(BLOB_READ_WRITE_TOKEN)が設定されていません。本番環境の環境変数またはローカルの.envファイルを確認してください。',
                     diagnostics
                 },
@@ -83,15 +103,24 @@ const safeFilename = `item-images/${Date.now()}-${crypto.randomUUID()}.${ext}`;
             );
         }
 
-        // Upload to Vercel Blob (Public access for item images)
-       const blob = await put(safeFilename, arrayBuffer, {
-    access: 'public',
-    contentType: safeContentType,
-});
+        console.log('[UPLOAD DIAG] stage=safeFilename-generated', { safeFilename });
+        console.log('[UPLOAD DIAG] stage=before-put', {
+            safeFilename,
+            safeContentType
+        });
 
+        const blob = await put(safeFilename, arrayBuffer, {
+            access: 'public',
+            contentType: safeContentType,
+        });
+
+        console.log('[UPLOAD DIAG] stage=after-put');
         return NextResponse.json(blob);
     } catch (error: any) {
-        console.error('Upload error:', error);
+        console.error('[UPLOAD ERROR]', {
+            message: error?.message,
+            stage: 'catch'
+        }, error?.stack);
         return NextResponse.json({ error: error.message || 'Upload failed' }, { status: 500 });
     }
 }
