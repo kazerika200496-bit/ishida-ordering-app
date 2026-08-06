@@ -216,6 +216,7 @@ const ItemImageUpload = ({
 export default function AdminPage() {
     const [activeTab, setActiveTab] = useState<'locations' | 'suppliers' | 'items'>('items');
     const [adminCategoryFilter, setAdminCategoryFilter] = useState('すべて');
+    const [itemSearchQuery, setItemSearchQuery] = useState('');
 
     const [items, setItems] = useState<Item[]>([]);
     const [locations, setLocations] = useState<Location[]>([]);
@@ -461,6 +462,25 @@ export default function AdminPage() {
         </div>
     );
 
+    const normalizeSearchText = (value: string) => value.trim().toLowerCase().normalize('NFKC');
+    const normalizedQuery = normalizeSearchText(itemSearchQuery);
+    const filteredItems = items.filter(item => {
+        const categoryMatch = adminCategoryFilter === 'すべて' || normalizeCategory(item.category) === adminCategoryFilter;
+        if (!categoryMatch) return false;
+
+        if (!normalizedQuery) return true;
+
+        const fieldsToSearch = [
+            item.id,
+            item.materialCode || '',
+            item.name,
+            normalizeCategory(item.category) || '',
+            item.category || '',
+        ];
+
+        return fieldsToSearch.some(field => normalizeSearchText(field).includes(normalizedQuery));
+    });
+
     return (
         <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto', fontFamily: '"Inter", sans-serif', color: '#333' }}>
             <header style={{
@@ -499,21 +519,32 @@ export default function AdminPage() {
                             </button>
                         ))}
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
                         {activeTab === 'items' && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#666' }}>カテゴリ絞り込み:</span>
-                                <select
-                                    value={adminCategoryFilter}
-                                    onChange={(e) => setAdminCategoryFilter(e.target.value)}
-                                    style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', backgroundColor: '#fff', fontSize: '14px', cursor: 'pointer' }}
-                                >
-                                    <option value="すべて">すべて表示</option>
-                                    {CATEGORIES.map(cat => (
-                                        <option key={cat} value={cat}>{cat}</option>
-                                    ))}
-                                </select>
-                            </div>
+                            <>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#666' }}>カテゴリ絞り込み:</span>
+                                    <select
+                                        value={adminCategoryFilter}
+                                        onChange={(e) => setAdminCategoryFilter(e.target.value)}
+                                        style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', backgroundColor: '#fff', fontSize: '14px', cursor: 'pointer' }}
+                                    >
+                                        <option value="すべて">すべて表示</option>
+                                        {CATEGORIES.map(cat => (
+                                            <option key={cat} value={cat}>{cat}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <input
+                                        type="text"
+                                        value={itemSearchQuery}
+                                        onChange={(e) => setItemSearchQuery(e.target.value)}
+                                        placeholder="内部ID・資材ID・品目名・カテゴリで検索"
+                                        style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', minWidth: '240px', fontSize: '14px' }}
+                                    />
+                                </div>
+                            </>
                         )}
                         <button 
                             onClick={() => activeTab === 'items' ? addItem() : activeTab === 'locations' ? addLocation() : addSupplier()}
@@ -540,48 +571,51 @@ export default function AdminPage() {
                                 </tr>
                             </thead>
                             <tbody>
-                                {(() => {
-                                    const filteredItems = items.filter(item => adminCategoryFilter === 'すべて' || normalizeCategory(item.category) === adminCategoryFilter);
-                                    return filteredItems.map(item => (
-                                        <tr key={item.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
-                                            <td style={{ padding: '8px', fontSize: '11px', color: '#94a3b8', verticalAlign: 'middle' }}>{item.id.startsWith('new-') ? '新規' : item.id}</td>
-                                            <td style={{ padding: '8px' }}>
-                                                <input 
-                                                    value={item.materialCode || ''} 
-                                                    placeholder="未設定(保存時ID)" 
-                                                    onChange={e => updateItem(item.id, 'materialCode', e.target.value)} 
-                                                    style={{ width: '100%', padding: '6px', border: '1px solid #e2e8f0', borderRadius: '4px' }} 
-                                                />
-                                            </td>
-                                            <td style={{ padding: '8px' }}>
-                                                <select
-                                                    value={normalizeCategory(item.category) || 'その他'}
-                                                    onChange={e => updateItem(item.id, 'category', e.target.value)}
-                                                    style={{ width: '100%', padding: '5px', border: '1px solid #eee' }}
-                                                >
-                                                    {CATEGORIES.map(cat => (
-                                                        <option key={cat} value={cat}>{cat}</option>
-                                                    ))}
-                                                </select>
-                                            </td>
-                                            <td style={{ padding: '8px' }}>
-                                                <ItemImageUpload item={item} onUpdate={url => updateItem(item.id, 'imageUrl', url)} onUploadingChange={uploading => setItemUploading(item.id, uploading)} />
-                                            </td>
-                                            <td style={{ padding: '8px' }}>
-                                                <input value={item.name} onChange={e => updateItem(item.id, 'name', e.target.value)} style={{ width: '100%', padding: '5px', border: '1px solid #eee' }} placeholder="入力必須" />
-                                            </td>
-                                            <td style={{ padding: '8px' }}>
-                                                <input type="number" value={item.price || 0} onChange={e => updateItem(item.id, 'price', Number(e.target.value))} style={{ width: '70px', padding: '5px', border: '1px solid #eee', textAlign: 'right' }} />
-                                            </td>
-                                            <td style={{ padding: '8px' }}>
-                                                <input value={item.unit} onChange={e => updateItem(item.id, 'unit', e.target.value)} style={{ width: '40px', padding: '5px', border: '1px solid #eee' }} />
-                                            </td>
-                                            <td style={{ padding: '8px', textAlign: 'center' }}>
-                                                <button onClick={() => deleteItem(item.id)} style={{ padding: '4px 8px', backgroundColor: '#fee2e2', color: '#dc2626', border: '1px solid #fca5a5', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}>削除</button>
-                                            </td>
-                                        </tr>
-                                    ));
-                                })()}
+                                {filteredItems.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={8} style={{ padding: '20px', textAlign: 'center', color: '#6b7280' }}>
+                                            該当する品目がありません
+                                        </td>
+                                    </tr>
+                                ) : filteredItems.map(item => (
+                                    <tr key={item.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
+                                        <td style={{ padding: '8px', fontSize: '11px', color: '#94a3b8', verticalAlign: 'middle' }}>{item.id.startsWith('new-') ? '新規' : item.id}</td>
+                                        <td style={{ padding: '8px' }}>
+                                            <input
+                                                value={item.materialCode || ''}
+                                                placeholder="未設定(保存時ID)"
+                                                onChange={e => updateItem(item.id, 'materialCode', e.target.value)}
+                                                style={{ width: '100%', padding: '6px', border: '1px solid #e2e8f0', borderRadius: '4px' }}
+                                            />
+                                        </td>
+                                        <td style={{ padding: '8px' }}>
+                                            <select
+                                                value={normalizeCategory(item.category) || 'その他'}
+                                                onChange={e => updateItem(item.id, 'category', e.target.value)}
+                                                style={{ width: '100%', padding: '5px', border: '1px solid #eee' }}
+                                            >
+                                                {CATEGORIES.map(cat => (
+                                                    <option key={cat} value={cat}>{cat}</option>
+                                                ))}
+                                            </select>
+                                        </td>
+                                        <td style={{ padding: '8px' }}>
+                                            <ItemImageUpload item={item} onUpdate={(url) => updateItem(item.id, 'imageUrl', url)} onUploadingChange={uploading => setItemUploading(item.id, uploading)} />
+                                        </td>
+                                        <td style={{ padding: '8px' }}>
+                                            <input value={item.name} onChange={e => updateItem(item.id, 'name', e.target.value)} style={{ width: '100%', padding: '5px', border: '1px solid #eee' }} placeholder="入力必須" />
+                                        </td>
+                                        <td style={{ padding: '8px' }}>
+                                            <input type="number" value={item.price || 0} onChange={e => updateItem(item.id, 'price', Number(e.target.value))} style={{ width: '70px', padding: '5px', border: '1px solid #eee', textAlign: 'right' }} />
+                                        </td>
+                                        <td style={{ padding: '8px' }}>
+                                            <input value={item.unit} onChange={e => updateItem(item.id, 'unit', e.target.value)} style={{ width: '40px', padding: '5px', border: '1px solid #eee' }} />
+                                        </td>
+                                        <td style={{ padding: '8px', textAlign: 'center' }}>
+                                            <button onClick={() => deleteItem(item.id)} style={{ padding: '4px 8px', backgroundColor: '#fee2e2', color: '#dc2626', border: '1px solid #fca5a5', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}>削除</button>
+                                        </td>
+                                    </tr>
+                                ))}
                             </tbody>
                         </table>
                     )}
