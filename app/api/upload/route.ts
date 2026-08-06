@@ -48,10 +48,6 @@ const safeFilename = `item-images/${Date.now()}-${crypto.randomUUID()}.${ext}`;
 
         // 2. Validation: Check file size (Read into buffer to check size)
         const arrayBuffer = await request.arrayBuffer();
-        console.log('[UPLOAD DIAG] stage=arrayBuffer-read', {
-            byteLength: arrayBuffer.byteLength,
-            safeContentType
-        });
         if (arrayBuffer.byteLength > MAX_FILE_SIZE) {
             return NextResponse.json({ error: 'File size exceeds 5MB limit.' }, { status: 400 });
         }
@@ -82,16 +78,6 @@ const safeFilename = `item-images/${Date.now()}-${crypto.randomUUID()}.${ext}`;
             nodeEnv: process.env.NODE_ENV,
         };
 
-        console.log('[UPLOAD DIAG] tokenDiagnostics', {
-            tokenExists,
-            tokenLength,
-            tokenPrefixMatches,
-            tokenIsAscii,
-            tokenHasWhitespace,
-            tokenHasQuotes,
-            nonAsciiIndexes
-        });
-        console.log('[UPLOAD DIAG] blobEnvKeys', blobEnvKeys);
 
         if (!tokenExists) {
             return NextResponse.json(
@@ -103,21 +89,14 @@ const safeFilename = `item-images/${Date.now()}-${crypto.randomUUID()}.${ext}`;
             );
         }
 
-        console.log('[UPLOAD DIAG] stage=safeFilename-generated', { safeFilename });
-        console.log('[UPLOAD DIAG] stage=before-put', {
-            safeFilename,
-            safeContentType
-        });
-
         const blob = await put(safeFilename, arrayBuffer, {
             access: 'public',
             contentType: safeContentType,
         });
 
-        console.log('[UPLOAD DIAG] stage=after-put');
         return NextResponse.json(blob);
     } catch (error: any) {
-        console.error('[UPLOAD ERROR]', {
+        console.error('Upload error', {
             message: error?.message,
             stage: 'catch'
         }, error?.stack);
