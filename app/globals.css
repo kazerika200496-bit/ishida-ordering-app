@@ -45,6 +45,63 @@ header {
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+/* Mobile header adjustments: stack into three rows and prevent per-character wrapping */
+@media (max-width: 430px) {
+    header {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 10px 12px;
+        gap: 8px;
+    }
+
+    .header-title {
+        width: 100%;
+        font-size: 16px; /* slightly reduced to fit ~375px width */
+        font-weight: 700;
+        white-space: nowrap; /* prevent per-character wrapping */
+        overflow: hidden;
+        text-overflow: ellipsis; /* show trailing ellipsis if too long */
+    }
+
+    .header-requester {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .header-requester-label {
+        flex: 0 0 auto;
+        font-size: 13px;
+    }
+
+    .header-requester-input {
+        flex: 1 1 auto;
+        max-width: 220px;
+        min-width: 120px;
+    }
+
+    nav {
+        width: 100%;
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+
+    .nav-link, .nav-link-important, .btn-mobile-only {
+        padding: 8px 12px;
+        min-height: 40px; /* ensure tappable target */
+        font-size: 14px;
+    }
+
+    /* Make the prominent admin button slightly smaller but still touchable */
+    .nav-link-important {
+        padding: 8px 12px;
+        font-size: 14px;
+    }
+}
+
 .header-title {
     font-size: 20px;
     font-weight: bold;
