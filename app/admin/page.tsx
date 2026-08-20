@@ -221,6 +221,9 @@ export default function AdminPage() {
     const [items, setItems] = useState<Item[]>([]);
     const [locations, setLocations] = useState<Location[]>([]);
     const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+    const [originalItems, setOriginalItems] = useState<Item[]>([]);
+    const [originalLocations, setOriginalLocations] = useState<Location[]>([]);
+    const [originalSuppliers, setOriginalSuppliers] = useState<Supplier[]>([]);
     const [isMounted, setIsMounted] = useState(false);
     const [isDirty, setIsDirty] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
@@ -251,6 +254,10 @@ export default function AdminPage() {
                 setItems(data.items || []);
                 setLocations(data.locations || []);
                 setSuppliers(data.suppliers || []);
+                // 初期値を保存
+                setOriginalItems(data.items || []);
+                setOriginalLocations(data.locations || []);
+                setOriginalSuppliers(data.suppliers || []);
             } catch (err: any) {
                 console.error('Failed to fetch master data:', err);
                 setErrorMsg(err.message);
@@ -378,6 +385,73 @@ export default function AdminPage() {
         setIsDirty(true);
     };
 
+    // 変更検出関数
+    const getChangedItems = (): Item[] => {
+        return items.filter(item => {
+            // 新規追加は常に保存対象
+            if (item.id.startsWith('new-')) return true;
+            
+            // 初期値から削除されたものは除外
+            const original = originalItems.find(o => o.id === item.id);
+            if (!original) return false;
+            
+            // DB保存対象項目を明示的に比較
+            return (
+                item.materialCode !== original.materialCode ||
+                item.name !== original.name ||
+                item.price !== original.price ||
+                item.unit !== original.unit ||
+                item.category !== original.category ||
+                item.defaultSupplierId !== original.defaultSupplierId ||
+                item.imageUrl !== original.imageUrl
+            );
+        });
+    };
+
+    const getChangedLocations = (): Location[] => {
+        return locations.filter(loc => {
+            // 新規追加は常に保存対象
+            if (loc.id.startsWith('new-')) return true;
+            
+            // 初期値から削除されたものは除外
+            const original = originalLocations.find(o => o.id === loc.id);
+            if (!original) return false;
+            
+            // DB保存対象項目を明示的に比較
+            return (
+                loc.name !== original.name ||
+                loc.type !== original.type ||
+                loc.defaultSupplierId !== original.defaultSupplierId
+            );
+        });
+    };
+
+    const getChangedSuppliers = (): Supplier[] => {
+        return suppliers.filter(sup => {
+            // 新規追加は常に保存対象
+            if (sup.id.startsWith('new-')) return true;
+            
+            // 初期値から削除されたものは除外
+            const original = originalSuppliers.find(o => o.id === sup.id);
+            if (!original) return false;
+            
+            // DB保存対象項目を明示的に比較
+            return (
+                sup.name !== original.name ||
+                sup.type !== original.type ||
+                sup.officialName !== original.officialName ||
+                sup.zip !== original.zip ||
+                sup.address !== original.address ||
+                sup.tel !== original.tel ||
+                sup.fax !== original.fax ||
+                sup.method !== original.method ||
+                sup.deliveryDayOfWeek !== original.deliveryDayOfWeek ||
+                sup.cutoffDayOfWeek !== original.cutoffDayOfWeek ||
+                sup.cutoffTime !== original.cutoffTime
+            );
+        });
+    };
+
     const handleSave = async () => {
         if (isAnyImageUploading) {
             alert('画像のアップロードが完了するまでお待ちください。');
@@ -397,47 +471,61 @@ export default function AdminPage() {
 
         setIsSaving(true);
         try {
-            const validItems = items.filter(i => i.name.trim() !== '');
-            const validLocations = locations.filter(l => l.name.trim() !== '');
-            const validSuppliers = suppliers.filter(s => s.name.trim() !== '');
+            // 変更されたレコードだけを抽出
+            const changedItems = getChangedItems();
+            const changedLocations = getChangedLocations();
+            const changedSuppliers = getChangedSuppliers();
 
-            const itemPromises = validItems.map(async item => {
+            // 順次処理で変更されたレコードだけを保存
+            for (const item of changedItems) {
                 const res = await fetch('/api/items', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(item),
-    });
-
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(item),
+                });
                 if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        console.error('Item save failed:', data);
-        throw new Error(data.error || `品目「${item.name}」の保存に失敗しました。`);
-    }
+                    const data = await res.json().catch(() => ({}));
+                    console.error('Item save failed:', data);
+                    throw new Error(data.error || `品目「${item.name}」の保存に失敗しました。`);
+                }
+            }
 
-    return res.json();
-});
-            const locPromises = validLocations.map(async loc => {
-                const res = await fetch('/api/locations', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(loc) });
+            for (const loc of changedLocations) {
+                const res = await fetch('/api/locations', { 
+                    method: 'PATCH', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify(loc) 
+                });
                 if (!res.ok) {
                     const data = await res.json().catch(() => ({}));
                     throw new Error(data.error || `拠点「${loc.name}」の保存に失敗しました。`);
                 }
-                return res.json();
-            });
-            const supPromises = validSuppliers.map(async sup => {
-                const res = await fetch('/api/suppliers', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(sup) });
+            }
+
+            for (const sup of changedSuppliers) {
+                const res = await fetch('/api/suppliers', { 
+                    method: 'PATCH', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify(sup) 
+                });
                 if (!res.ok) {
                     const data = await res.json().catch(() => ({}));
                     throw new Error(data.error || `業者「${sup.name}」の保存に失敗しました。`);
                 }
-                return res.json();
-            });
+            }
 
-            await Promise.all([...itemPromises, ...locPromises, ...supPromises]);
+            // 保存成功後に初期値を更新
+            const validItems = items.filter(i => i.name.trim() !== '');
+            const validLocations = locations.filter(l => l.name.trim() !== '');
+            const validSuppliers = suppliers.filter(s => s.name.trim() !== '');
 
             localStorage.setItem('master_items', JSON.stringify(validItems));
             localStorage.setItem('master_locations', JSON.stringify(validLocations));
             localStorage.setItem('master_suppliers', JSON.stringify(validSuppliers));
+
+            setOriginalItems(validItems);
+            setOriginalLocations(validLocations);
+            setOriginalSuppliers(validSuppliers);
 
             setItems(validItems);
             setLocations(validLocations);
