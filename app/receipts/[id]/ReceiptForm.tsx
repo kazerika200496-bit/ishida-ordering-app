@@ -3,9 +3,10 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-import { FAVORITE_ACCOUNTS, TAX_CATEGORIES } from '@/lib/constants';
+import { FAVORITE_ACCOUNTS, TAX_CATEGORIES, PAYMENT_METHODS } from '@/lib/constants';
 
 export default function ReceiptForm({ receipt }: { receipt: any }) {
+
     const router = useRouter();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -231,6 +232,17 @@ export default function ReceiptForm({ receipt }: { receipt: any }) {
 
             <div className="form-row" style={{ borderTop: '1px solid #f1f5f9', paddingTop: '15px' }}>
                 <div className="form-col">
+                    <label style={labelStyle}>支払方法</label>
+                    <select
+                        value={paymentMethod}
+                        onChange={(e) => setPaymentMethod(e.target.value)}
+                        style={inputStyle}
+                    >
+                        <option value="">未選択</option>
+                        {PAYMENT_METHODS.map(method => <option key={method} value={method}>{method}</option>)}
+                    </select>
+                </div>
+                <div className="form-col">
                     <label style={labelStyle}>税区分</label>
                     <select
                         value={taxCategory}
@@ -241,6 +253,9 @@ export default function ReceiptForm({ receipt }: { receipt: any }) {
                         {TAX_CATEGORIES.map(tax => <option key={tax} value={tax}>{tax}</option>)}
                     </select>
                 </div>
+            </div>
+
+            <div className="form-row" style={{ paddingTop: '15px' }}>
                 <div className="form-col">
                     <label style={labelStyle}>合計金額 {requiredBadge}</label>
                     <input

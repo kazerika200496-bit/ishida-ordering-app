@@ -45,3 +45,11 @@ export const TAX_CATEGORIES = [
     '非課税',
     '不課税'
 ];
+
+export const PAYMENT_METHODS = [
+    '現金',
+    'クレジットカード',
+    '口座引落',
+    '銀行振込'
+];
+
