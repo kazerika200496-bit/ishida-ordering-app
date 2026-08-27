@@ -191,16 +191,19 @@ export default function ReceiptForm({ receipt }: { receipt: any }) {
             <div className="form-row" style={{ padding: '15px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #f1f5f9' }}>
                 <div className="form-col">
                     <label style={labelStyle}>勘定科目</label>
-                    <input
-                        list="accounts"
+                    <select
                         value={accountInput}
                         onChange={(e) => setAccountInput(e.target.value)}
                         style={inputStyle}
-                        placeholder="入力して検索..."
-                    />
-                    <datalist id="accounts">
-                        {FAVORITE_ACCOUNTS.map(acc => <option key={acc} value={acc} />)}
-                    </datalist>
+                    >
+                        <option value="">勘定科目を選択してください</option>
+                        {accountInput && !FAVORITE_ACCOUNTS.includes(accountInput) && (
+                            <option value={accountInput}>{accountInput}</option>
+                        )}
+                        {FAVORITE_ACCOUNTS.map(acc => (
+                            <option key={acc} value={acc}>{acc}</option>
+                        ))}
+                    </select>
                     {isCodeMissing && (
                         <div style={{ marginTop: '8px', padding: '8px', backgroundColor: '#fffbeb', color: '#b45309', fontSize: '12px', borderRadius: '4px', border: '1px solid #fef3c7' }}>
                             ⚠️ 勘定科目コード未設定 (社内確認用としてはこのままで保存可能です)
