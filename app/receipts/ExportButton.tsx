@@ -20,7 +20,24 @@ export default function ExportButton() {
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
-                alert(errorData.error || '出力対象のデータがありません。');
+                if (errorData.invalidReceipts && errorData.missingCounts) {
+                    const labels: Record<string, string> = {
+                        receiptDate: '日付',
+                        amount: '金額',
+                        accountName: '勘定科目',
+                        taxCategory: '税区分',
+                        paymentMethod: '支払方法'
+                    };
+                    const missingSummary = Object.entries(errorData.missingCounts)
+                        .map(([field, count]) => `${labels[field] || field}未設定：${count}件`)
+                        .join('\n');
+                    const receiptSummary = errorData.invalidReceipts
+                        .map((receipt: { id: string; missingFields: string[] }) => `${receipt.id}: ${receipt.missingFields.map((field) => labels[field] || field).join('、')}`)
+                        .join('\n');
+                    alert(`${errorData.error}\n${errorData.invalidReceiptCount}件の領収書を確認してください。\n\n${missingSummary}\n\nReceipt ID・不足項目:\n${receiptSummary}`);
+                } else {
+                    alert(errorData.error || '出力対象のデータがありません。');
+                }
                 setIsExporting(false);
                 return;
             }

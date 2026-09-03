@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { FORMATTERS, generateCsvContent } from '@/lib/receipt-export-utils';
+import { validateYayoiReceipts } from '@/lib/receipt-export-validation';
 
 const prisma = new PrismaClient();
 
@@ -42,6 +43,16 @@ export async function POST(request: NextRequest) {
 
         if (receipts.length === 0) {
             return NextResponse.json({ error: '対象の確定済データがありません。' }, { status: 400 });
+        }
+
+        if (formatKey === 'yayoi') {
+            const validation = validateYayoiReceipts(receipts);
+            if (!validation.isValid) {
+                return NextResponse.json({
+                    error: 'CSVを出力できません。入力内容を確認してください。',
+                    ...validation
+                }, { status: 422 });
+            }
         }
 
         // CSV生成 (共通ユーティリティを使用)
