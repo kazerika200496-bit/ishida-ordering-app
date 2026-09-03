@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Supplier } from '../types';
+import { formatLocationName } from '@/lib/utils';
 
 export default function HistoryPage() {
     const [orders, setOrders] = useState<any[]>([]);
@@ -41,7 +42,7 @@ export default function HistoryPage() {
     }, []);
 
     const getSupplierName = (id: string) => suppliers.find(s => s.id === id)?.name || id;
-    const getLocationName = (id: string) => locations.find(l => l.id === id)?.name || id;
+    const getLocationName = (id: string) => formatLocationName(locations.find(l => l.id === id)?.name || id);
 
     const getStatusStyle = (status: string) => {
         switch (status) {

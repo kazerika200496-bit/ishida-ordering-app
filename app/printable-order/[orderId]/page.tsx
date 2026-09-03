@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { VendorOrder, VendorOrderLine } from '../../types';
+import { formatLocationName } from '@/lib/utils';
 
 export default function PrintableOrder() {
     const params = useParams();
@@ -110,7 +111,7 @@ export default function PrintableOrder() {
                 </div>
                 <div style={{ textAlign: 'right', borderBottom: '1px solid #000', width: '35%', paddingBottom: '5px' }}>
                     <div style={{ fontSize: '12px', color: '#666' }}>納品・発送先</div>
-                    <div style={{ fontSize: '14px', fontWeight: 'bold' }}>いしだクリーニング 本社工場</div>
+                    <div style={{ fontSize: '14px', fontWeight: 'bold' }}>{formatLocationName('いしだクリーニング 本社工場')}</div>
                 </div>
             </div>
 

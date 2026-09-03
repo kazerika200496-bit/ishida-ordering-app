@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, type ChangeEvent } from 'react';
 import Link from 'next/link';
 import { Item, Location, Supplier } from '../types';
 import { normalizeCategory } from '@/lib/category';
+import { formatLocationName } from '@/lib/utils';
 
 
 const CATEGORIES = [
@@ -310,6 +311,16 @@ export default function AdminPage() {
     const updateLocation = (id: string, field: keyof Location, value: any) => {
         setLocations(locations.map(l => l.id === id ? { ...l, [field]: value } : l));
         setIsDirty(true);
+    };
+
+    const handleLocationNameChange = (id: string, currentFullName: string, newInputValue: string) => {
+        const match = currentFullName.match(/^(パステルクリーニング|いしだクリーニング)[\s_]*/);
+        const prefix = match ? match[0] : '';
+        let newFullName = newInputValue;
+        if (prefix && !newInputValue.startsWith(prefix.trim())) {
+            newFullName = `${prefix}${newInputValue}`;
+        }
+        updateLocation(id, 'name', newFullName);
     };
 
     const addItem = () => {
@@ -722,7 +733,7 @@ export default function AdminPage() {
                                     <tr key={loc.id} style={{ borderBottom: '1px solid #eee' }}>
                                         <td style={{ padding: '12px' }}>{loc.id.startsWith('new-') ? '新規' : loc.id}</td>
                                         <td style={{ padding: '12px' }}>
-                                            <input value={loc.name} onChange={e => updateLocation(loc.id, 'name', e.target.value)} style={{ width: '100%', padding: '5px', border: '1px solid #eee' }} placeholder="入力必須" />
+                                            <input value={formatLocationName(loc.name)} onChange={e => handleLocationNameChange(loc.id, loc.name, e.target.value)} style={{ width: '100%', padding: '5px', border: '1px solid #eee' }} placeholder="入力必須" />
                                         </td>
                                         <td style={{ padding: '12px', textAlign: 'center' }}>
                                             <button onClick={() => deleteLocation(loc.id)} style={{ padding: '4px 8px', backgroundColor: '#fee2e2', color: '#dc2626', border: '1px solid #fca5a5', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}>削除</button>

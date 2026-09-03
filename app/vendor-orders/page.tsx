@@ -2,11 +2,13 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { VendorOrder, Supplier, Item, VendorOrderLine } from '../types';
+import { VendorOrder, Supplier, Item, VendorOrderLine, Location } from '../types';
+import { formatLocationName } from '@/lib/utils';
 
 export default function VendorOrdersPage() {
     const [orders, setOrders] = useState<VendorOrder[]>([]);
     const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+    const [locations, setLocations] = useState<Location[]>([]);
     const [items, setItems] = useState<Item[]>([]);
     const [selectedVendorId, setSelectedVendorId] = useState<string>('');
     const [isAdmin, setIsAdmin] = useState(false);
@@ -33,6 +35,7 @@ export default function VendorOrdersPage() {
 
                 setOrders(ordersData);
                 setSuppliers(masterData.suppliers.filter((s: Supplier) => s.type === '業者'));
+                setLocations(masterData.locations || []);
                 setItems(masterData.items);
             } catch (err: any) {
                 console.error('Failed to fetch data:', err);
@@ -147,6 +150,12 @@ export default function VendorOrdersPage() {
         if (status === 'CONFIRMED') return '#fbbc04'; // Yellow
         if (status === 'SENT') return '#34a853'; // Green
         return '#70757a'; // Gray
+    };
+
+    const getLocationName = (id: string) => {
+        if (!id) return '不明';
+        const found = locations.find(l => l.id === id)?.name || id;
+        return formatLocationName(found);
     };
 
     if (isLoading) return <div style={{ padding: '20px' }}>読み込み中...</div>;
@@ -312,7 +321,7 @@ export default function VendorOrdersPage() {
                                                     <td style={{ padding: '12px 8px', fontSize: '14px', fontWeight: 'bold' }}>{line.price === null ? '-' : `¥${(line.qty * line.price).toLocaleString()}`}</td>
                                                     {!isConsolidated && (
                                                         <td style={{ padding: '12px 8px' }}>
-                                                            <div style={{ fontSize: '12px', fontWeight: 'bold' }}>{line.locationId || '不明'}</div>
+                                                            <div style={{ fontSize: '12px', fontWeight: 'bold' }}>{getLocationName(line.locationId)}</div>
                                                             <div style={{ fontSize: '11px', color: '#999' }}>{line.requestedBy || '-'}</div>
                                                         </td>
                                                     )}

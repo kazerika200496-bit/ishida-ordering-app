@@ -12,6 +12,7 @@ import {
 } from './mockData';
 import { Item, OrderItem, Location, Supplier, Order } from './types';
 import { normalizeCategory } from '@/lib/category';
+import { formatLocationName } from '@/lib/utils';
 
 
 export default function Home() {
@@ -445,7 +446,7 @@ export default function Home() {
                                         style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd', marginTop: '4px', fontSize: '14px', backgroundColor: isStoreRole ? '#f5f5f5' : '#fff', cursor: isStoreRole ? 'not-allowed' : 'auto' }}
                                     >
                                     <option value="">発注元を選択してください</option>
-                                    {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+                                    {locations.map(l => <option key={l.id} value={l.id}>{formatLocationName(l.name)}</option>)}
                                 </select>
                             </div>
                             <div>
@@ -457,7 +458,7 @@ export default function Home() {
                                     disabled={!sourceId}
                                 >
                                     <option value="">自動選択されます</option>
-                                    {availableDestinations.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                                    {availableDestinations.map(d => <option key={d.id} value={d.id}>{formatLocationName(d.name)}</option>)}
                                 </select>
                             </div>
                             <div>
