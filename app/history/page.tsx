@@ -86,57 +86,84 @@ export default function HistoryPage() {
                             </tr>
                         </thead>
                         <tbody>
-                            {orders.map(order => {
-                                const style = getStatusStyle(order.status);
-                                // Get unique location IDs from all lines in this order
-                                const orderLocationIds = Array.from(new Set(order.lines.map((l: any) => l.locationId).filter(Boolean))) as string[];
-                                const locationNames = orderLocationIds.length > 0 ? orderLocationIds.map(getLocationName).join(', ') : '不明';
+                                {orders.map(order => {
+                                    const style = getStatusStyle(order.status);
+                                    // Get unique location IDs from all lines in this order
+                                    const orderLocationIds = Array.from(new Set(order.lines.map((l: any) => l.locationId).filter(Boolean))) as string[];
+                                    const locationNames = orderLocationIds.length > 0 ? orderLocationIds.map(getLocationName).join(', ') : '不明';
 
-                                return (
-                                    <tr key={order.id} style={{ borderBottom: '1px solid #eee' }}>
-                                        <td style={{ padding: '12px', verticalAlign: 'top' }}>
-                                            <div style={{ fontWeight: 'bold' }}>{new Date(order.createdAt).toLocaleDateString()}</div>
-                                            {order.confirmedAt && (
-                                                <div style={{ fontSize: '0.8rem', color: '#666', marginTop: '4px' }}>
-                                                    更新: {new Date(order.confirmedAt).toLocaleDateString()} {new Date(order.confirmedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    // Group lines by locationId
+                                    const linesByLocation: Record<string, any[]> = {};
+                                    order.lines.forEach((line: any) => {
+                                        const locId = line.locationId || 'unknown';
+                                        if (!linesByLocation[locId]) {
+                                            linesByLocation[locId] = [];
+                                        }
+                                        linesByLocation[locId].push(line);
+                                    });
+
+                                    return (
+                                        <tr key={order.id} style={{ borderBottom: '1px solid #eee' }}>
+                                            <td style={{ padding: '12px', verticalAlign: 'top' }}>
+                                                <div style={{ fontWeight: 'bold' }}>{new Date(order.createdAt).toLocaleDateString()}</div>
+                                                {order.confirmedAt && (
+                                                    <div style={{ fontSize: '0.8rem', color: '#666', marginTop: '4px' }}>
+                                                        更新: {new Date(order.confirmedAt).toLocaleDateString()} {new Date(order.confirmedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                    </div>
+                                                )}
+                                            </td>
+                                            <td style={{ padding: '12px', verticalAlign: 'top' }}>
+                                                <div style={{ fontWeight: 'bold', color: '#0056b3' }}>{locationNames}</div>
+                                            </td>
+                                            <td style={{ padding: '12px', verticalAlign: 'top' }}>
+                                                <div style={{ fontWeight: 'bold' }}>{getSupplierName(order.vendorId)}</div>
+                                                <div style={{ fontSize: '0.8rem', color: '#666' }}>締切: {new Date(order.cutoffAt).toLocaleDateString()}</div>
+                                            </td>
+                                            <td style={{ padding: '12px', verticalAlign: 'top' }}>
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                                    {Object.entries(linesByLocation).map(([locId, lines]) => {
+                                                        const storeName = getLocationName(locId);
+                                                        return (
+                                                            <div key={locId} style={{
+                                                                backgroundColor: '#f8f9fa',
+                                                                borderRadius: '6px',
+                                                                padding: '8px 12px',
+                                                                borderLeft: '3px solid #0056b3'
+                                                            }}>
+                                                                <div style={{ fontWeight: 'bold', color: '#0056b3', fontSize: '0.88rem', marginBottom: '4px' }}>
+                                                                    ■ {storeName}
+                                                                </div>
+                                                                <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '0.85rem' }}>
+                                                                    {lines.map((line: any) => (
+                                                                        <li key={line.id} style={{ marginBottom: '3px' }}>
+                                                                            {line.itemName} × <strong>{line.qty} {line.unit}</strong>
+                                                                            {line.price !== null && (
+                                                                                <span style={{ color: '#666', marginLeft: '8px' }}>(¥{line.price.toLocaleString()})</span>
+                                                                            )}
+                                                                        </li>
+                                                                    ))}
+                                                                </ul>
+                                                            </div>
+                                                        );
+                                                    })}
                                                 </div>
-                                            )}
-                                        </td>
-                                        <td style={{ padding: '12px', verticalAlign: 'top' }}>
-                                            <div style={{ fontWeight: 'bold', color: '#0056b3' }}>{locationNames}</div>
-                                        </td>
-                                        <td style={{ padding: '12px', verticalAlign: 'top' }}>
-                                            <div style={{ fontWeight: 'bold' }}>{getSupplierName(order.vendorId)}</div>
-                                            <div style={{ fontSize: '0.8rem', color: '#666' }}>締切: {new Date(order.cutoffAt).toLocaleDateString()}</div>
-                                        </td>
-                                        <td style={{ padding: '12px', verticalAlign: 'top' }}>
-                                            <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '0.9rem' }}>
-                                                {order.lines.map((line: any) => (
-                                                    <li key={line.id} style={{ marginBottom: '4px' }}>
-                                                        {line.itemName} x <strong>{line.qty} {line.unit}</strong>
-                                                        {line.price !== null && (
-                                                            <span style={{ color: '#666', marginLeft: '8px' }}>(¥{line.price.toLocaleString()})</span>
-                                                        )}
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        </td>
-                                        <td style={{ padding: '12px', verticalAlign: 'top' }}>
-                                            <span style={{
-                                                padding: '4px 10px',
-                                                borderRadius: '20px',
-                                                fontSize: '0.85rem',
-                                                fontWeight: 'bold',
-                                                backgroundColor: style.bg,
-                                                color: style.color,
-                                                display: 'inline-block'
-                                            }}>
-                                                {style.label}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                );
-                            })}
+                                            </td>
+                                            <td style={{ padding: '12px', verticalAlign: 'top' }}>
+                                                <span style={{
+                                                    padding: '4px 10px',
+                                                    borderRadius: '20px',
+                                                    fontSize: '0.85rem',
+                                                    fontWeight: 'bold',
+                                                    backgroundColor: style.bg,
+                                                    color: style.color,
+                                                    display: 'inline-block'
+                                                }}>
+                                                    {style.label}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
                         </tbody>
                     </table>
                     {orders.length === 0 && (
