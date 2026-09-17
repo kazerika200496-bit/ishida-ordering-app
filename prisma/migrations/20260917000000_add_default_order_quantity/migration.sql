@@ -1,0 +1,1 @@
+ALTER TABLE "Item" ADD COLUMN "defaultOrderQuantity" INTEGER NOT NULL DEFAULT 1;

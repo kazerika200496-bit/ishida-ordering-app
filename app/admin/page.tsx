@@ -412,6 +412,7 @@ export default function AdminPage() {
                 item.name !== original.name ||
                 item.price !== original.price ||
                 item.unit !== original.unit ||
+                item.defaultOrderQuantity !== original.defaultOrderQuantity ||
                 item.category !== original.category ||
                 item.defaultSupplierId !== original.defaultSupplierId ||
                 item.imageUrl !== original.imageUrl
@@ -666,13 +667,14 @@ export default function AdminPage() {
                                     <th style={{ padding: '10px', textAlign: 'left', fontSize: '13px' }}>品目名</th>
                                     <th style={{ padding: '10px', textAlign: 'left', fontSize: '13px', width: '90px' }}>単価</th>
                                     <th style={{ padding: '10px', textAlign: 'left', fontSize: '13px', width: '60px' }}>単位</th>
+                                    <th style={{ padding: '10px', textAlign: 'left', fontSize: '13px', width: '90px' }}>基本数量</th>
                                     <th style={{ padding: '10px', textAlign: 'center', fontSize: '13px', width: '60px' }}>操作</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {filteredItems.length === 0 ? (
                                     <tr>
-                                        <td colSpan={8} style={{ padding: '20px', textAlign: 'center', color: '#6b7280' }}>
+                                        <td colSpan={9} style={{ padding: '20px', textAlign: 'center', color: '#6b7280' }}>
                                             該当する品目がありません
                                         </td>
                                     </tr>
@@ -709,6 +711,25 @@ export default function AdminPage() {
                                         </td>
                                         <td style={{ padding: '8px' }}>
                                             <input value={item.unit} onChange={e => updateItem(item.id, 'unit', e.target.value)} style={{ width: '40px', padding: '5px', border: '1px solid #eee' }} />
+                                        </td>
+                                        <td style={{ padding: '8px' }}>
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                step="1"
+                                                value={item.defaultOrderQuantity ?? 1}
+                                                onChange={e => {
+                                                    const rawValue = e.target.value;
+                                                    const value = Number(rawValue);
+                                                    const nextValue = rawValue === ''
+                                                        ? 1
+                                                        : Number.isInteger(value) && value >= 1
+                                                            ? value
+                                                            : (item.defaultOrderQuantity ?? 1);
+                                                    updateItem(item.id, 'defaultOrderQuantity', nextValue);
+                                                }}
+                                                style={{ width: '70px', padding: '5px', border: '1px solid #eee', textAlign: 'right' }}
+                                            />
                                         </td>
                                         <td style={{ padding: '8px', textAlign: 'center' }}>
                                             <button onClick={() => deleteItem(item.id)} style={{ padding: '4px 8px', backgroundColor: '#fee2e2', color: '#dc2626', border: '1px solid #fca5a5', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}>削除</button>

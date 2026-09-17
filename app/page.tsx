@@ -254,7 +254,7 @@ export default function Home() {
                 itemId: item.id,
                 itemName: item.name,
                 displayName: item.displayName,
-                quantity: 1,
+                quantity: item.defaultOrderQuantity ?? 1,
                 unit: item.unit,
                 price: item.price ?? 0
             }]);

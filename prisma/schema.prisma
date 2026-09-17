@@ -18,6 +18,7 @@ model Item {
   displayName       String?
   unit              String
   price             Float?
+  defaultOrderQuantity Int      @default(1)
   imageUrl          String?
   defaultSupplierId String?
   orderLines        VendorOrderLine[]

@@ -32,6 +32,7 @@ export interface Item {
     unit: string;
     displayName?: string;
     price?: number;
+    defaultOrderQuantity?: number;
     imageUrl?: string; // サムネイル
     defaultSupplierId?: string;
 }

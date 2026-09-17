@@ -38,6 +38,14 @@ export async function PATCH(request: Request) {
             return NextResponse.json({ error: '品目名は必須です。' }, { status: 400 });
         }
 
+        const defaultOrderQuantity = data.defaultOrderQuantity === '' || data.defaultOrderQuantity === null || data.defaultOrderQuantity === undefined
+            ? 1
+            : Number(data.defaultOrderQuantity);
+        if (!Number.isInteger(defaultOrderQuantity) || defaultOrderQuantity < 1) {
+              return NextResponse.json({ error: '基本数量は1以上の整数で入力してください。' }, { status: 400 });
+        }
+        data.defaultOrderQuantity = defaultOrderQuantity;
+
         // Ensure new IDs are created properly if they come from the frontend as 'new-...'
         const isNew = id.startsWith('new-');
         const finalId = isNew ? `item-${Date.now()}-${Math.floor(Math.random() * 1000)}` : id;
