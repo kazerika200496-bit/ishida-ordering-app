@@ -31,6 +31,7 @@ export const prisma = {
     get user() { return getClient().user; },
     get item() { return getClient().item; },
     get location() { return getClient().location; },
+    get employee() { return getClient().employee; },
     get supplier() { return getClient().supplier; },
     get vendorOrder() { return getClient().vendorOrder; },
     get vendorOrderLine() { return getClient().vendorOrderLine; },

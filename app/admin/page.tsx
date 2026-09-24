@@ -595,6 +595,7 @@ export default function AdminPage() {
                     ⚙️ マスタ管理 {isDirty && <span style={{ fontSize: '14px', fontWeight: 'normal', color: '#d93025', marginLeft: '10px' }}>⚠️ 未保存の変更があります</span>}
                 </h1>
                 <div style={{ display: 'flex', gap: '8px' }}>
+                    <Link href="/admin/employees" style={{ padding: '10px 16px', backgroundColor: '#1a73e8', color: '#fff', textDecoration: 'none', borderRadius: '8px', fontWeight: 'bold' }}>従業員マスタ</Link>
                     <button 
                         onClick={handleSave} 
                         disabled={isSaving || isAnyImageUploading}
