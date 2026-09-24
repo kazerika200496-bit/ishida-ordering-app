@@ -1,4 +1,4 @@
-import { randomBytes, scrypt } from 'crypto';
+import { randomBytes, scrypt, timingSafeEqual } from 'crypto';
 
 const PIN_LENGTH = 4;
 const KEY_LENGTH = 64;
@@ -16,6 +16,37 @@ export function hashAttendancePin(pin: string): Promise<string> {
                 return;
             }
             resolve(`scrypt$${salt}$${derivedKey.toString('hex')}`);
+        });
+    });
+}
+
+export function verifyAttendancePin(pin: string, hash: string): Promise<boolean> {
+    if (!validateAttendancePin(pin) || !hash || typeof hash !== 'string') {
+        return Promise.resolve(false);
+    }
+
+    const parts = hash.split('$');
+    if (parts.length !== 3 || parts[0] !== 'scrypt') {
+        return Promise.resolve(false);
+    }
+
+    const salt = parts[1];
+    const targetKeyHex = parts[2];
+
+    return new Promise((resolve) => {
+        scrypt(pin, salt, KEY_LENGTH, (error, derivedKey) => {
+            if (error) {
+                resolve(false);
+                return;
+            }
+            const derivedKeyHex = derivedKey.toString('hex');
+            const targetBuffer = Buffer.from(targetKeyHex, 'hex');
+            const derivedBuffer = Buffer.from(derivedKeyHex, 'hex');
+            if (targetBuffer.length !== derivedBuffer.length) {
+                resolve(false);
+                return;
+            }
+            resolve(timingSafeEqual(targetBuffer, derivedBuffer));
         });
     });
 }

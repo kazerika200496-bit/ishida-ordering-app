@@ -375,6 +375,7 @@ export default function Home() {
                             />
                         </div>
                         <Link href="/history" className="nav-link">発注履歴</Link>
+                        <Link href="/attendance-punch" className="nav-link" style={{ backgroundColor: '#0f766e', color: '#fff', fontWeight: 'bold', padding: '6px 12px', borderRadius: '6px' }}>勤怠打刻</Link>
                         {currentUser?.role === 'admin' && (
                             <Link href="/vendor-orders" className="nav-link-important">管理画面</Link>
                         )}
