@@ -180,6 +180,7 @@ export default function EmployeesPage() {
             <header style={{ marginBottom: '25px' }}>
                 <div className="header-title">従業員マスタ</div>
                 <Link href="/admin" style={{ color: '#fff', textDecoration: 'none', fontSize: '14px' }}>マスタ管理へ戻る</Link>
+                <Link href="/admin/attendance" style={{ color: '#fff', textDecoration: 'none', fontSize: '14px' }}>日次勤怠</Link>
             </header>
 
             {error && <div className="alert alert-error" style={{ marginBottom: '20px' }}>{error}</div>}
