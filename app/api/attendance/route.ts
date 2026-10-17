@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
+import { getTokyoDateString, roundClockIn, roundClockOut, toAttendanceDate } from '@/lib/attendance-time';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,7 +10,7 @@ function isDateString(value: unknown): value is string {
 }
 
 function dateValue(value: string) {
-    return new Date(`${value}T00:00:00.000Z`);
+    return toAttendanceDate(value);
 }
 
 async function requireAdmin() {
@@ -27,7 +28,7 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
-    const date = new URL(request.url).searchParams.get('date') || new Date().toISOString().slice(0, 10);
+    const date = new URL(request.url).searchParams.get('date') || getTokyoDateString();
     if (!isDateString(date)) {
         return NextResponse.json({ error: '日付の形式が正しくありません。' }, { status: 400 });
     }
@@ -49,7 +50,7 @@ export async function POST(request: Request) {
         const body = await request.json();
         const employeeId = typeof body.employeeId === 'string' ? body.employeeId : '';
         const action = body.action;
-        const date = body.date || new Date().toISOString().slice(0, 10);
+        const date = body.date || getTokyoDateString();
 
         if (!employeeId || !['clock-in', 'clock-out'].includes(action) || !isDateString(date)) {
             return NextResponse.json({ error: '従業員、操作、日付を正しく指定してください。' }, { status: 400 });
@@ -75,12 +76,14 @@ export async function POST(request: Request) {
             if (existing) {
                 return NextResponse.json({ error: 'この従業員はすでに出勤済みです。' }, { status: 409 });
             }
+            const clockIn = new Date();
             const record = await prisma.attendanceRecord.create({
                 data: {
                     employeeId,
                     locationId: employee.locationId,
                     date: recordDate,
-                    clockIn: new Date(),
+                    clockIn,
+                    roundedClockIn: roundClockIn(clockIn),
                     status: 'WORKING',
                 },
                 include: attendanceInclude,
@@ -103,10 +106,12 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: '休憩分数は0以上の整数で入力してください。' }, { status: 400 });
         }
 
+        const clockOut = new Date();
         const record = await prisma.attendanceRecord.update({
             where: { id: existing.id },
             data: {
-                clockOut: new Date(),
+                clockOut,
+                roundedClockOut: roundClockOut(clockOut),
                 breakMinutes,
                 status: 'COMPLETED',
             },

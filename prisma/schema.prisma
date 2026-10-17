@@ -70,6 +70,8 @@ model AttendanceRecord {
   date         DateTime @db.Date
   clockIn      DateTime?
   clockOut     DateTime?
+  roundedClockIn  DateTime?
+  roundedClockOut DateTime?
   breakMinutes Int      @default(0)
   status       String   @default("WORKING")
   createdAt    DateTime @default(now())

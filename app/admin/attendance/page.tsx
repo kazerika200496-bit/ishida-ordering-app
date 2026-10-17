@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { getTokyoDateString } from '@/lib/attendance-time';
 
 type Employee = {
     id: string;
@@ -17,6 +18,8 @@ type Attendance = {
     date: string;
     clockIn: string | null;
     clockOut: string | null;
+    roundedClockIn: string | null;
+    roundedClockOut: string | null;
     breakMinutes: number;
     status: string;
     employee: Employee;
@@ -24,11 +27,11 @@ type Attendance = {
 };
 
 function today() {
-    return new Date().toISOString().slice(0, 10);
+    return getTokyoDateString();
 }
 
 function formatTime(value: string | null) {
-    return value ? new Date(value).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }) : '-';
+    return value ? new Date(value).toLocaleTimeString('ja-JP', { timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit' }) : '-';
 }
 
 export default function AttendancePage() {
@@ -118,8 +121,8 @@ export default function AttendancePage() {
 
             {isLoading ? <div style={{ padding: '35px', textAlign: 'center' }}>勤怠データを読み込み中...</div> : (
                 <div style={{ backgroundColor: '#fff', overflowX: 'auto', borderRadius: '8px' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '900px' }}>
-                        <thead><tr style={{ borderBottom: '2px solid #e5e7eb', textAlign: 'left' }}><th style={cellStyle}>社員コード</th><th style={cellStyle}>氏名</th><th style={cellStyle}>所属拠点</th><th style={cellStyle}>出勤</th><th style={cellStyle}>退勤</th><th style={cellStyle}>休憩分</th><th style={cellStyle}>状態</th><th style={cellStyle}>操作</th></tr></thead>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '1100px' }}>
+                        <thead><tr style={{ borderBottom: '2px solid #e5e7eb', textAlign: 'left' }}><th style={cellStyle}>社員コード</th><th style={cellStyle}>氏名</th><th style={cellStyle}>所属拠点</th><th style={cellStyle}>出勤（実打刻）</th><th style={cellStyle}>出勤（給与計算用）</th><th style={cellStyle}>退勤（実打刻）</th><th style={cellStyle}>退勤（給与計算用）</th><th style={cellStyle}>休憩分</th><th style={cellStyle}>状態</th><th style={cellStyle}>操作</th></tr></thead>
                         <tbody>{employees.map(employee => {
                             const record = recordByEmployee.get(employee.id);
                             const isWorking = Boolean(record?.clockIn && !record.clockOut);
@@ -129,7 +132,9 @@ export default function AttendancePage() {
                                 <td style={cellStyle}>{employee.name}</td>
                                 <td style={cellStyle}>{record?.location.name || '-'}</td>
                                 <td style={cellStyle}>{formatTime(record?.clockIn || null)}</td>
+                                <td style={cellStyle}>{formatTime(record?.roundedClockIn || null)}</td>
                                 <td style={cellStyle}>{formatTime(record?.clockOut || null)}</td>
+                                <td style={cellStyle}>{formatTime(record?.roundedClockOut || null)}</td>
                                 <td style={cellStyle}><input type="number" min="0" step="1" value={breakMinutes[employee.id] ?? String(record?.breakMinutes ?? 0)} onChange={event => setBreakMinutes({ ...breakMinutes, [employee.id]: event.target.value })} disabled={!isWorking || busyId === employee.id} style={{ ...inputStyle, width: '80px' }} /></td>
                                 <td style={cellStyle}>{isCompleted ? '退勤済み' : isWorking ? '出勤中' : '未打刻'}</td>
                                 <td style={{ ...cellStyle, whiteSpace: 'nowrap' }}>
