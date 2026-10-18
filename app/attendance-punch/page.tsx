@@ -26,12 +26,13 @@ export default function AttendancePunchPage() {
     const [customBreak, setCustomBreak] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' | 'info' }>({ text: '', type: 'info' });
-    const [currentTime, setCurrentTime] = useState(new Date());
+    const [currentTime, setCurrentTime] = useState<Date | null>(null);
 
     const selectedStaff = staffList.find(s => s.id === selectedStaffId);
 
     // Live clock update
     useEffect(() => {
+        setCurrentTime(new Date());
         const timer = setInterval(() => setCurrentTime(new Date()), 1000);
         return () => clearInterval(timer);
     }, []);
@@ -154,10 +155,14 @@ export default function AttendancePunchPage() {
             {/* Live Clock Card */}
             <div style={{ textAlign: 'center', marginBottom: '20px', padding: '16px', backgroundColor: '#fff', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
                 <div style={{ fontSize: '36px', fontWeight: 'bold', color: 'var(--primary-color, #1a73e8)', fontFamily: 'monospace', letterSpacing: '1px' }}>
-                    {currentTime.toLocaleTimeString('ja-JP')}
+                    {currentTime
+                        ? currentTime.toLocaleTimeString('ja-JP', { timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' })
+                        : '--:--:--'}
                 </div>
                 <div style={{ fontSize: '14px', color: '#64748b', marginTop: '2px' }}>
-                    {currentTime.toLocaleDateString('ja-JP', { weekday: 'short', year: 'numeric', month: 'long', day: 'numeric' })}
+                    {currentTime
+                        ? currentTime.toLocaleDateString('ja-JP', { weekday: 'short', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'Asia/Tokyo' })
+                        : '----年--月--日'}
                 </div>
             </div>
 
