@@ -1,6 +1,13 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
-import { FORMATTERS, generateCsvContent } from '@/lib/receipt-export-utils';
+import {
+    encodeYayoiCsvContent,
+    FORMATTERS,
+    generateCsvContent,
+    generateYayoiCsvContent,
+    validateYayoiExport,
+    YayoiEncodingError
+} from '@/lib/receipt-export-utils';
 import { validateYayoiReceipts } from '@/lib/receipt-export-validation';
 
 const prisma = new PrismaClient();
@@ -8,19 +15,31 @@ const prisma = new PrismaClient();
 export async function POST(request: NextRequest) {
     try {
         const data = await request.json().catch(() => ({}));
-        const monthString = data?.month; // e.g. "2024-04"
+        const monthString = data?.month;
         const formatKey = data?.format || 'default';
+        const isYayoi = formatKey === 'yayoi';
+
         const formatter = FORMATTERS[formatKey] || FORMATTERS.default;
 
-        // ベース条件
-        let whereClause: any = { status: 'CONFIRMED' };
+        // 確定済みの領収書のみ対象
+        const whereClause: any = {
+            status: 'CONFIRMED'
+        };
 
-        // 月指定フィルター（YYYY-MM）
+        // 月指定フィルター YYYY-MM
         if (monthString && monthString.length === 7) {
             const year = parseInt(monthString.split('-')[0]);
-            const monthIndex = parseInt(monthString.split('-')[1]) - 1; // 0-based
+            const monthIndex = parseInt(monthString.split('-')[1]) - 1;
+
             const firstDay = new Date(year, monthIndex, 1);
-            const lastDay = new Date(year, monthIndex + 1, 0, 23, 59, 59);
+            const lastDay = new Date(
+                year,
+                monthIndex + 1,
+                0,
+                23,
+                59,
+                59
+            );
 
             whereClause.receiptDate = {
                 gte: firstDay,
@@ -28,7 +47,6 @@ export async function POST(request: NextRequest) {
             };
         }
 
-        // 【重複防止】未出力かつ確定済（CONFIRMED）のものだけを対象とする
         const receipts = await prisma.receipt.findMany({
             where: whereClause,
             include: {
@@ -38,47 +56,87 @@ export async function POST(request: NextRequest) {
                     }
                 }
             },
-            orderBy: { receiptDate: 'asc' }
+            orderBy: {
+                receiptDate: 'asc'
+            }
         });
 
         if (receipts.length === 0) {
-            return NextResponse.json({ error: '対象の確定済データがありません。' }, { status: 400 });
+            return NextResponse.json(
+                {
+                    error: '対象の確定済データがありません。'
+                },
+                { status: 400 }
+            );
         }
 
-        if (formatKey === 'yayoi') {
-            const validation = validateYayoiReceipts(receipts);
-            if (!validation.isValid) {
+        if (isYayoi) {
+            const requiredValidation = validateYayoiReceipts(receipts);
+            if (!requiredValidation.isValid) {
                 return NextResponse.json({
-                    error: 'CSVを出力できません。入力内容を確認してください。',
-                    ...validation
+                    error: '弥生CSVを出力できません。入力内容を確認してください。',
+                    ...requiredValidation
+                }, { status: 422 });
+            }
+
+            const formatIssues = validateYayoiExport(receipts);
+            if (formatIssues.length > 0) {
+                return NextResponse.json({
+                    error: '未確認の税区分・支払方法、または弥生形式にできない日付が含まれています。',
+                    formatIssues
                 }, { status: 422 });
             }
         }
 
-        // CSV生成 (共通ユーティリティを使用)
-        const csvContent = generateCsvContent(receipts, formatter);
-        const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
+        const csvContent = isYayoi
+            ? generateYayoiCsvContent(receipts)
+            : generateCsvContent(receipts, formatter);
 
-        // 【事故防止】出力したデータを「出力済 (EXPORT_READY)」に更新する
-        await prisma.receipt.updateMany({
-            where: { id: { in: receipts.map((r: any) => r.id) } },
-            data: { status: 'EXPORT_READY' }
-        });
+        let responseBody: Buffer;
+        if (isYayoi) {
+            try {
+                responseBody = encodeYayoiCsvContent(csvContent);
+            } catch (error) {
+                if (error instanceof YayoiEncodingError) {
+                    return NextResponse.json({ error: error.message }, { status: 422 });
+                }
+                throw error;
+            }
+        } else {
+            const bom = Buffer.from([0xEF, 0xBB, 0xBF]);
+            responseBody = Buffer.concat([bom, Buffer.from(csvContent)]);
+        }
 
-        const filename = `${formatter.filenamePrefix}_${monthString || new Date().toISOString().split('T')[0]}.csv`;
+        const extension = isYayoi ? 'txt' : 'csv';
+        const filename = `${formatter.filenamePrefix}_${monthString || new Date().toISOString().split('T')[0]}.${extension}`;
 
-        // 成功した場合はCSVのバイナリと、何件出力したかのヘッダーを返す
-        return new NextResponse(Buffer.concat([bom, Buffer.from(csvContent)]), {
-            headers: {
-                'Content-Type': 'text/csv; charset=utf-8',
-                'Content-Disposition': `attachment; filename="${filename}"`,
-                'X-Export-Count': receipts.length.toString()
-            },
-        });
+        const exportedIds = receipts
+            .map((receipt: any) => receipt.id)
+            .join(',');
 
+        // CSV生成だけを行い、ここではステータスを更新しない
+        return new NextResponse(
+            new Uint8Array(responseBody),
+            {
+                headers: {
+                    'Content-Type': isYayoi
+                        ? 'text/plain; charset=Shift_JIS'
+                        : 'text/csv; charset=utf-8',
+                    'Content-Disposition': `attachment; filename="${filename}"`,
+                    'X-Export-Count': receipts.length.toString(),
+                    'X-Exported-Ids': exportedIds
+                }
+            }
+        );
     } catch (error: any) {
         console.error('CSV Export Error:', error);
-        return NextResponse.json({ error: '内部サーバーエラーが発生しました。' }, { status: 500 });
+
+        return NextResponse.json(
+            {
+                error: '内部サーバーエラーが発生しました。'
+            },
+            { status: 500 }
+        );
     } finally {
         await prisma.$disconnect();
     }

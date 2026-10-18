@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 export default function ExportButton() {
     const [isExporting, setIsExporting] = useState(false);
     const [month, setMonth] = useState(''); // e.g. "2024-04"
-    const [format, setFormat] = useState('default'); // 'default' or 'yayoi'
+    const format = 'yayoi';
     const router = useRouter();
 
     const handleExport = async () => {
@@ -35,6 +35,11 @@ export default function ExportButton() {
                         .map((receipt: { id: string; missingFields: string[] }) => `${receipt.id}: ${receipt.missingFields.map((field) => labels[field] || field).join('、')}`)
                         .join('\n');
                     alert(`${errorData.error}\n${errorData.invalidReceiptCount}件の領収書を確認してください。\n\n${missingSummary}\n\nReceipt ID・不足項目:\n${receiptSummary}`);
+                } else if (Array.isArray(errorData.formatIssues)) {
+                    const issueSummary = errorData.formatIssues
+                        .map((issue: { receiptId: string; reasons: string[] }) => `${issue.receiptId}: ${issue.reasons.join('、')}`)
+                        .join('\n');
+                    alert(`${errorData.error}\n\nReceipt ID・未対応項目:\n${issueSummary}`);
                 } else {
                     alert(errorData.error || '出力対象のデータがありません。');
                 }
@@ -48,7 +53,7 @@ export default function ExportButton() {
             a.href = url;
 
             const contentDisposition = response.headers.get('content-disposition');
-            let filename = `yayoi_export_${month || 'all'}.csv`;
+            let filename = `yayoi_export_${month || 'all'}.txt`;
             if (contentDisposition && contentDisposition.indexOf('filename=') !== -1) {
                 filename = contentDisposition.split('filename=')[1].replace(/["']/g, '');
             }
@@ -60,10 +65,36 @@ export default function ExportButton() {
             document.body.removeChild(a);
 
             const exportedCount = response.headers.get('X-Export-Count') || '複数';
-            alert(`CSV出力完了: ${exportedCount} 件のデータを「出力済」にマークしました！`);
+            const exportedIdsHeader = response.headers.get('X-Exported-Ids');
+            const exportedIds = exportedIdsHeader ? exportedIdsHeader.split(',').filter(Boolean) : [];
 
-            router.refresh();
-            setMonth(''); // Reset filter after success
+            // ユーザー明示確認ダイアログ（安全性の担保）
+            if (exportedIds.length > 0) {
+                const shouldMark = confirm(
+                    `CSVファイルをダウンロードしました (${exportedCount}件)。\n\n対象の領収書を「出力済」に変更しますか？\n（[キャンセル] を選ぶと「未出力」のまま残ります）`
+                );
+
+                if (shouldMark) {
+                    const markRes = await fetch('/api/receipts/mark-exported', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ ids: exportedIds })
+                    });
+
+                    if (markRes.ok) {
+                        const markData = await markRes.json();
+                        alert(`${markData.updatedCount} 件の領収書を「出力済」に変更しました！`);
+                        router.refresh();
+                        setMonth(''); // Reset filter after success
+                    } else {
+                        alert('CSVファイルはダウンロードされましたが、ステータスの更新に失敗しました。');
+                    }
+                } else {
+                    alert('ステータスは変更せず、「未出力（確定済）」のまま維持されました。');
+                }
+            } else {
+                alert(`CSV出力完了: ${exportedCount} 件のデータをダウンロードしました。`);
+            }
         } catch (error) {
             alert('ネットワークエラーが発生しました');
             console.error(error);
