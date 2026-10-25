@@ -286,38 +286,44 @@ export default function Home() {
         let vendorOrderId: string | null = null;
 
         try {
-            // 全ての宛先（業者・工場）への発注をAPIでサーバーに送信する
             const dest = availableDestinations.find(d => d.id === destinationId);
-            if (dest) {
-                for (const item of cart) {
-                    const res = await fetch('/api/vendor-orders', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            vendorId: destinationId,
-                            itemId: item.itemId,
-                            itemName: item.itemName,
-                            qty: item.quantity,
-                            unit: item.unit,
-                            price: item.price || 0,
-                            requestedBy: requesterName,
-                            locationId: sourceId,
-                            note: remarks
-                        })
-                    });
-                    const data = await res.json();
-                    if (data.error) {
-                        alert(`エラーが発生しました: ${data.error}`);
-                        return; // Stop submission
-                    }
-                    if (data.orderId) {
-                        vendorOrderId = data.orderId; // VORD-... を取得
-                    }
-                }
+            if (!dest) {
+                throw new Error('発注先を選択し直してください。');
             }
 
+            const res = await fetch('/api/vendor-orders', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    vendorId: destinationId,
+                    items: cart.map(item => ({
+                        itemId: item.itemId,
+                        itemName: item.itemName,
+                        qty: item.quantity,
+                        unit: item.unit,
+                        price: item.price || 0
+                    })),
+                    requestedBy: requesterName,
+                    locationId: sourceId,
+                    note: remarks
+                })
+            });
+
+            let data: { error?: unknown; orderId?: unknown };
+            try {
+                data = await res.json();
+            } catch {
+                throw new Error(`サーバーから有効な応答を受け取れませんでした (HTTP ${res.status})。`);
+            }
+            if (!res.ok) {
+                throw new Error(typeof data.error === 'string' ? data.error : `サーバーエラーが発生しました (HTTP ${res.status})。`);
+            }
+            if (typeof data.orderId !== 'string') {
+                throw new Error('発注結果を確認できませんでした。注文状況を確認してください。');
+            }
+            vendorOrderId = data.orderId;
+
             const localOrderId = `ORD-${Date.now()}`;
-            // 業者発注の場合はサーバー側の注文ID(VORD-)、それ以外はローカル(ORD-)を使用
             const finalId = vendorOrderId || localOrderId;
 
             const newOrder: Order = {
@@ -333,14 +339,36 @@ export default function Home() {
 
             const updatedOrders = [newOrder, ...localOrders];
             setLocalOrders(updatedOrders);
-            localStorage.setItem('local_orders', JSON.stringify(updatedOrders));
+            let localHistorySaved = true;
+            try {
+                localStorage.setItem('local_orders', JSON.stringify(updatedOrders));
+            } catch (error) {
+                console.error('Failed to save local order history:', error);
+                localHistorySaved = false;
+            }
             setLastSubmittedId(finalId);
             setCart([]);
             setRemarks('');
-            setShowAlert({ message: '発注が正常に完了しました。', type: 'success' });
+            setShowAlert({
+                message: localHistorySaved
+                    ? '発注が正常に完了しました。'
+                    : '発注は完了しましたが、端末内の履歴保存に失敗しました。',
+                type: 'success'
+            });
 
             // 自動的に最上部へスクロールして通知を見せる
             window.scrollTo({ top: 0, behavior: 'smooth' });
+        } catch (error) {
+            console.error('Failed to submit order:', error);
+            const message = error instanceof TypeError
+                ? '通信エラーが発生しました。ネットワーク接続を確認してください。'
+                : error instanceof Error
+                    ? error.message
+                    : '予期しないエラーが発生しました。';
+            setShowAlert({
+                message: `発注を完了できませんでした。カートは保持されています。${message} 注文状況を確認してから再試行してください。`,
+                type: 'warning'
+            });
         } finally {
             setIsSubmitting(false);
         }
