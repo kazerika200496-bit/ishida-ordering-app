@@ -13,7 +13,24 @@ export async function GET(request: Request) {
     }
 
     const { searchParams } = new URL(request.url);
-    const locationId = session.locationId || searchParams.get('locationId');
+    let locationId: string | null;
+    if (session.role === 'store') {
+        locationId = typeof session.locationId === 'string' ? session.locationId : null;
+    } else if (session.role === 'admin') {
+        locationId = searchParams.get('locationId');
+        if (!locationId) {
+            return NextResponse.json({ error: '拠点を選択してください。' }, { status: 400 });
+        }
+        const location = await prisma.location.findUnique({
+            where: { id: locationId },
+            select: { id: true, type: true },
+        });
+        if (!location || !['店舗', '工場'].includes(location.type)) {
+            return NextResponse.json({ error: '有効な店舗または工場を選択してください。' }, { status: 400 });
+        }
+    } else {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     if (!locationId) {
         return NextResponse.json({ error: '所属店舗・工場が見つかりません。' }, { status: 400 });
@@ -84,8 +101,32 @@ export async function POST(request: Request) {
         const body = await request.json();
         const { employeeId, pin, action } = body;
 
+        if (session.role !== 'admin' && session.role !== 'store') {
+            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        }
+
         if (typeof employeeId !== 'string' || !employeeId) {
             return NextResponse.json({ error: '従業員IDを指定してください。' }, { status: 400 });
+        }
+
+        let allowedLocationId: string;
+        if (session.role === 'store') {
+            if (typeof session.locationId !== 'string' || !session.locationId) {
+                return NextResponse.json({ error: '所属店舗・工場が見つかりません。' }, { status: 400 });
+            }
+            allowedLocationId = session.locationId;
+        } else {
+            if (typeof body.locationId !== 'string' || !body.locationId) {
+                return NextResponse.json({ error: '拠点を選択してください。' }, { status: 400 });
+            }
+            const location = await prisma.location.findUnique({
+                where: { id: body.locationId },
+                select: { id: true, type: true },
+            });
+            if (!location || !['店舗', '工場'].includes(location.type)) {
+                return NextResponse.json({ error: '有効な店舗または工場を選択してください。' }, { status: 400 });
+            }
+            allowedLocationId = location.id;
         }
 
         if (!validateAttendancePin(pin)) {
@@ -111,9 +152,11 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: '従業員が見つかりません。' }, { status: 404 });
         }
 
-        // Security check: restrict punch to employee's assigned location for store user
-        if (session.role !== 'admin' && session.locationId !== employee.locationId) {
-            return NextResponse.json({ error: '他店舗の従業員は打刻できません。' }, { status: 403 });
+        if (allowedLocationId !== employee.locationId) {
+            const error = session.role === 'admin'
+                ? '選択した拠点以外の従業員は打刻できません。'
+                : '他店舗の従業員は打刻できません。';
+            return NextResponse.json({ error }, { status: 403 });
         }
 
         if (!employee.isActive) {

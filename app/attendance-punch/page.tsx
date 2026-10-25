@@ -1,7 +1,13 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
+
+interface LocationItem {
+    id: string;
+    name: string;
+    type: string;
+}
 
 interface StaffItem {
     id: string;
@@ -16,6 +22,9 @@ interface StaffItem {
 }
 
 export default function AttendancePunchPage() {
+    const [userRole, setUserRole] = useState<string | null>(null);
+    const [locations, setLocations] = useState<LocationItem[]>([]);
+    const [selectedLocationId, setSelectedLocationId] = useState('');
     const [staffList, setStaffList] = useState<StaffItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -27,6 +36,7 @@ export default function AttendancePunchPage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' | 'info' }>({ text: '', type: 'info' });
     const [currentTime, setCurrentTime] = useState<Date | null>(null);
+    const fetchRequestId = useRef(0);
 
     const selectedStaff = staffList.find(s => s.id === selectedStaffId);
 
@@ -37,27 +47,75 @@ export default function AttendancePunchPage() {
         return () => clearInterval(timer);
     }, []);
 
+    useEffect(() => {
+        const loadSession = async () => {
+            try {
+                const sessionResponse = await fetch('/api/auth/me');
+                const sessionData = await sessionResponse.json();
+                if (!sessionResponse.ok || !sessionData.user) {
+                    throw new Error(sessionData.error || 'ログイン情報の取得に失敗しました。');
+                }
+
+                if (sessionData.user.role === 'admin') {
+                    const locationsResponse = await fetch('/api/locations');
+                    const locationsData = await locationsResponse.json();
+                    if (!locationsResponse.ok) {
+                        throw new Error(locationsData.error || '拠点一覧の取得に失敗しました。');
+                    }
+                    setLocations(locationsData.filter((location: LocationItem) => ['店舗', '工場'].includes(location.type)));
+                } else if (sessionData.user.role !== 'store') {
+                    throw new Error('このアカウントでは勤怠打刻を利用できません。');
+                }
+
+                setUserRole(sessionData.user.role);
+            } catch (err: any) {
+                setError(err.message || 'ログイン情報の取得に失敗しました。');
+                setLoading(false);
+            }
+        };
+
+        loadSession();
+    }, []);
+
     const fetchStaffList = useCallback(async () => {
+        if (!userRole) return;
+        if (userRole === 'admin' && !selectedLocationId) {
+            fetchRequestId.current += 1;
+            setStaffList([]);
+            setLoading(false);
+            setError('');
+            return;
+        }
+
+        const requestId = ++fetchRequestId.current;
         try {
             setLoading(true);
-            const res = await fetch('/api/attendance/punch');
+            const query = userRole === 'admin'
+                ? `?locationId=${encodeURIComponent(selectedLocationId)}`
+                : '';
+            const res = await fetch(`/api/attendance/punch${query}`);
             if (!res.ok) {
                 const data = await res.json().catch(() => ({}));
                 throw new Error(data.error || '従業員情報の取得に失敗しました。');
             }
             const data = await res.json();
-            setStaffList(data);
-            setError('');
+            if (requestId === fetchRequestId.current) {
+                setStaffList(data);
+                setError('');
+            }
         } catch (err: any) {
-            setError(err.message || 'データ取得エラー');
+            if (requestId === fetchRequestId.current) {
+                setStaffList([]);
+                setError(err.message || 'データ取得エラー');
+            }
         } finally {
-            setLoading(false);
+            if (requestId === fetchRequestId.current) setLoading(false);
         }
-    }, []);
+    }, [userRole, selectedLocationId]);
 
     useEffect(() => {
-        fetchStaffList();
-    }, [fetchStaffList]);
+        if (userRole) fetchStaffList();
+    }, [fetchStaffList, userRole]);
 
     const resetState = useCallback((delayMs = 3000) => {
         setTimeout(() => {
@@ -111,6 +169,7 @@ export default function AttendancePunchPage() {
                     employeeId: selectedStaffId,
                     pin: pinInput,
                     action,
+                    ...(userRole === 'admin' ? { locationId: selectedLocationId } : {}),
                     breakMinutes: action === 'clock-out' ? (selectedBreak ?? breakMinutes) : undefined,
                 }),
             });
@@ -188,6 +247,27 @@ export default function AttendancePunchPage() {
                 {/* 1. SELECT STAFF VIEW */}
                 {view === 'SELECT' && (
                     <>
+                        {userRole === 'admin' && (
+                            <label style={{ display: 'grid', gap: '8px', marginBottom: '18px', color: '#334155', fontWeight: 'bold' }}>
+                                拠点を選択
+                                <select
+                                    value={selectedLocationId}
+                                    onChange={event => {
+                                        setSelectedLocationId(event.target.value);
+                                        setSelectedStaffId(null);
+                                        setPinInput('');
+                                        setStaffList([]);
+                                        setMessage({ text: '', type: 'info' });
+                                    }}
+                                    style={{ padding: '12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '16px', backgroundColor: '#fff' }}
+                                >
+                                    <option value="">拠点を選択してください</option>
+                                    {locations.map(location => (
+                                        <option key={location.id} value={location.id}>{location.name}（{location.type}）</option>
+                                    ))}
+                                </select>
+                            </label>
+                        )}
                         <h2 style={{ fontSize: '17px', textAlign: 'center', marginBottom: '18px', color: '#334155' }}>自分の名前を選択してください</h2>
 
                         {loading && (
@@ -198,12 +278,19 @@ export default function AttendancePunchPage() {
                             <div className="alert alert-error" style={{ marginBottom: '15px' }}>{error}</div>
                         )}
 
-                        {!loading && !error && staffList.length === 0 && (
+                        {!loading && !error && userRole === 'admin' && !selectedLocationId && (
+                            <div style={{ textAlign: 'center', padding: '40px 10px', color: '#94a3b8' }}>
+                                拠点を選択してください。
+                            </div>
+                        )}
+
+                        {!loading && !error && (userRole !== 'admin' || selectedLocationId) && staffList.length === 0 && (
                             <div style={{ textAlign: 'center', padding: '40px 10px', color: '#94a3b8' }}>
                                 この店舗・工場に所属する在籍従業員はいません。
                             </div>
                         )}
 
+                        {(userRole !== 'admin' || selectedLocationId) && (
                         <div style={{ display: 'grid', gap: '12px' }}>
                             {staffList.map(s => {
                                 const isWorking = s.todayStatus === 'WORKING';
@@ -253,6 +340,7 @@ export default function AttendancePunchPage() {
                                 );
                             })}
                         </div>
+                        )}
                     </>
                 )}
 
